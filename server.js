@@ -942,21 +942,21 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;white-space:nowrap;}
 
   /* Bottom panel: 2 columns */
-  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:180px;}
-  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow-y:auto;display:flex;flex-direction:column;align-items:flex-start;}
-  .panel-objectives{flex:1;padding:12px 16px;overflow-y:auto;}
-  .panel-label{font-weight:700;color:var(--dark);margin-bottom:8px;font-size:.88rem;}
+  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:220px;}
+  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;}
+  .panel-objectives{flex:1;padding:12px 16px;overflow:hidden;}
+  .panel-label{font-weight:700;color:var(--dark);margin-bottom:5px;font-size:.85rem;}
   .drawn-tile-wrap{display:flex;align-items:center;gap:10px;}
-  .drawn-tile{width:58px;height:58px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.4rem;border:3px solid var(--deep);flex-shrink:0;}
-  .fichas-count{font-size:.82rem;color:#555;margin-top:3px;}
-  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:8px;}
-  .guard-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .drawn-tile{width:52px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.3rem;border:3px solid var(--deep);flex-shrink:0;}
+  .fichas-count{font-size:.8rem;color:#555;margin-top:2px;}
+  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:5px;}
+  .guard-btns{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
   .btn{padding:14px 22px;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;}
   .btn:active{transform:scale(.96);}
   .btn-primary{background:linear-gradient(135deg,var(--sea),var(--deep));color:#fff;box-shadow:0 4px 14px rgba(0,80,160,.3);}
   .btn-secondary{background:var(--sand);color:var(--dark);border:2px solid var(--sand2);}
   .btn-sm{padding:7px 13px;font-size:.82rem;}
-  .guard-label{font-size:.82rem;color:#555;margin-bottom:6px;}
+  .guard-label{font-size:.8rem;color:#555;margin-bottom:3px;}
   .waiting-msg{font-size:.82rem;color:#888;font-style:italic;margin-top:6px;}
 
   /* Objectives */
@@ -1111,7 +1111,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
           </div>
         </div>
         <!-- guard + waiting always occupy same fixed space -->
-        <div style="margin-top:9px;min-height:60px;position:relative;">
+        <div style="margin-top:6px;min-height:60px;position:relative;">
           <div id="guard-section" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
             <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
             <div class="guard-btns">
