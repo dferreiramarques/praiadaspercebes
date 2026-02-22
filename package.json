@@ -1,0 +1,16 @@
+{
+  "name": "praia-das-percebes",
+  "version": "1.0.0",
+  "description": "Jogo Na Praia das Percebes online",
+  "main": "server.js",
+  "type": "module",           // importante se usares import/export sem .js
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
