@@ -1,15 +1,15 @@
 {
   "name": "praia-das-percebes",
   "version": "1.0.0",
-  "description": "Jogo Na Praia das Percebes online",
+  "description": "Na Praia das Percebes - multiplayer tile placement game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
-  "dependencies": {
-    "ws": "^8.18.0"
-  },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
   }
 }
