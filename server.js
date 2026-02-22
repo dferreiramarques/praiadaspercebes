@@ -902,8 +902,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .dot.me{background:#2dc653;}
 
   /* ── Game Screen ── */
-  #screen-game{padding:0;gap:0;max-width:100%;align-items:stretch;}
-  .game-topbar{background:var(--deep);color:#fff;padding:10px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;}
+  #screen-game{padding:0;gap:0;width:100%;align-items:stretch !important;height:100vh;overflow:hidden;flex-direction:column !important;}
+  .game-topbar{background:var(--deep);color:#fff;padding:10px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;flex-shrink:0;}
   .topbar-players{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
   .topbar-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .topbar-title{text-align:center;font-size:.9rem;font-weight:700;color:#caf0f8;white-space:nowrap;}
@@ -915,12 +915,14 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .btn-rules{background:#ffffff22;border:1px solid #ffffff44;color:#fff;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
   .btn-rules:hover{background:#ffffff33;}
 
-  /* ── Board ── */
-  .game-main{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:14px;gap:14px;}
-  .board-and-panel{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;}
-  .board-area{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;}
-  .board-wrap{position:relative;overflow:auto;max-width:100%;max-height:55vh;}
-  .board-canvas{position:relative;}
+  /* ── Main layout: board centered, bottom panel ── */
+  .game-body{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
+
+  /* Board zone — fills available space, board centered inside */
+  .board-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:14px 14px 0;}
+  .board-scroll{overflow:auto;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;}
+  .board-canvas{position:relative;margin:auto;}
+
   .tile{position:absolute;width:84px;height:84px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
   .tile.normal{background:linear-gradient(135deg,var(--sand),var(--sand2));}
   .tile.surf{background:linear-gradient(135deg,#ff9f1c,#ffbf69);}
@@ -932,27 +934,37 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
 
-  /* ── Turn Guide ── */
-  .turn-guide{background:#ffffffb0;backdrop-filter:blur(6px);border-radius:14px;padding:10px 16px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.75rem;color:#444;border:1px solid #e0e0e0;}
+  /* Turn guide strip */
+  .turn-guide{background:#ffffffb0;backdrop-filter:blur(6px);border-radius:12px;padding:8px 14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.75rem;color:#444;border:1px solid #e0e0e0;margin:8px 14px 0;flex-shrink:0;}
   .tg-step{display:flex;align-items:center;gap:5px;white-space:nowrap;}
   .tg-num{width:20px;height:20px;border-radius:50%;background:var(--deep);color:#fff;font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
   .tg-arrow{color:#aaa;font-size:.8rem;}
-  .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;}
+  .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;white-space:nowrap;}
 
-  /* ── Panel ── */
-  .game-panel{background:#ffffffd0;border-radius:18px;padding:14px 18px;width:100%;max-width:560px;}
-  .panel-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .drawn-tile-wrap{display:flex;align-items:center;gap:12px;}
-  .drawn-tile{width:70px;height:70px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:3px solid var(--deep);}
-  .guard-btns{display:flex;gap:7px;flex-wrap:wrap;}
-  .fichas-count{font-size:.88rem;color:#555;}
-  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.82rem;font-weight:700;padding:4px 10px;border-radius:20px;margin-bottom:8px;}
+  /* Bottom panel: 2 columns */
+  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;max-height:220px;}
+  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow-y:auto;}
+  .panel-objectives{flex:1;padding:12px 16px;overflow-y:auto;}
+  .panel-label{font-weight:700;color:var(--dark);margin-bottom:8px;font-size:.88rem;}
+  .drawn-tile-wrap{display:flex;align-items:center;gap:10px;}
+  .drawn-tile{width:58px;height:58px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.4rem;border:3px solid var(--deep);flex-shrink:0;}
+  .fichas-count{font-size:.82rem;color:#555;margin-top:3px;}
+  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:700;padding:3px 9px;border-radius:20px;margin-bottom:8px;}
+  .guard-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+  .btn{padding:14px 22px;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;}
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:linear-gradient(135deg,var(--sea),var(--deep));color:#fff;box-shadow:0 4px 14px rgba(0,80,160,.3);}
+  .btn-secondary{background:var(--sand);color:var(--dark);border:2px solid var(--sand2);}
+  .btn-sm{padding:7px 13px;font-size:.82rem;}
+  .guard-label{font-size:.82rem;color:#555;margin-bottom:6px;}
+  .waiting-msg{font-size:.82rem;color:#888;font-style:italic;margin-top:6px;}
 
-  /* ── Objectives ── */
-  .obj-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
-  .obj-card{background:var(--sand);border-radius:9px;padding:7px 11px;font-size:.78rem;display:flex;gap:7px;align-items:center;}
+  /* Objectives */
+  .obj-list{display:flex;flex-wrap:wrap;gap:6px;}
+  .obj-card{background:var(--sand);border-radius:8px;padding:5px 9px;font-size:.74rem;display:flex;gap:6px;align-items:center;}
   .obj-card.claimed{background:#d8f3dc;text-decoration:line-through;color:#666;}
   .obj-pts{font-weight:800;color:var(--deep);}
+  .credits-small{font-size:.65rem;color:#aaa;font-style:italic;text-align:center;margin-top:8px;}
 
   /* ── Rules Modal ── */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
@@ -977,12 +989,6 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .winner-banner{font-size:1.9rem;font-weight:900;color:var(--deep);}
   .notif{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:13px 26px;border-radius:13px;font-size:.9rem;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center;}
   .notif.show{opacity:1;}
-  @media(min-width:820px){
-    .board-and-panel{flex-direction:row;align-items:flex-start;justify-content:center;}
-    .board-area{align-items:flex-start;}
-    .board-wrap{max-height:78vh;}
-    .game-panel{max-width:300px;flex-shrink:0;}
-  }
 </style>
 </head>
 <body>
@@ -1071,52 +1077,57 @@ const CLIENT_HTML = `<!DOCTYPE html>
       <button class="btn-rules" id="btn-show-rules">📋 Regras</button>
     </div>
   </div>
-  <div class="game-main">
-    <div class="board-and-panel">
-      <div class="board-area">
-        <div class="board-wrap">
-          <div class="board-canvas" id="board-canvas"></div>
+  <div class="game-body">
+    <!-- Board: centered, grows from middle -->
+    <div class="board-zone">
+      <div class="board-scroll">
+        <div class="board-canvas" id="board-canvas"></div>
+      </div>
+    </div>
+
+    <!-- Turn sequence strip -->
+    <div class="turn-guide">
+      <div class="tg-step"><div class="tg-num">1</div> Pescar tile</div>
+      <div class="tg-arrow">›</div>
+      <div class="tg-step"><div class="tg-num">2</div> Colocar no tabuleiro</div>
+      <div class="tg-arrow">›</div>
+      <div class="tg-step"><div class="tg-num">3</div> Salva-vidas? (↔↕)</div>
+      <div class="tg-arrow">›</div>
+      <div class="tg-step"><div class="tg-num">4</div> Objetivos?</div>
+      <div class="tg-score">🛟 pontos = banhistas na linha · 🏄 ×2 · 🪨 bloqueia · +2/ficha restante</div>
+    </div>
+
+    <!-- Bottom 2-column panel -->
+    <div class="bottom-panel">
+      <!-- Left: turn actions -->
+      <div class="panel-turn">
+        <div id="my-color-badge-wrap"></div>
+        <div class="panel-label">🃏 Tile Retirado</div>
+        <div class="drawn-tile-wrap">
+          <div class="drawn-tile" id="drawn-tile-display">?</div>
+          <div>
+            <div id="drawn-tile-desc" style="font-size:.8rem;color:#555"></div>
+            <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
+          </div>
         </div>
-        <div class="turn-guide">
-          <div class="tg-step"><div class="tg-num">1</div> Pescar tile</div>
-          <div class="tg-arrow">›</div>
-          <div class="tg-step"><div class="tg-num">2</div> Colocar no tabuleiro</div>
-          <div class="tg-arrow">›</div>
-          <div class="tg-step"><div class="tg-num">3</div> Salva-vidas? (↔↕)</div>
-          <div class="tg-arrow">›</div>
-          <div class="tg-step"><div class="tg-num">4</div> Objetivos?</div>
-          <div class="tg-score">🛟 pontos = banhistas na linha · 🏄 ×2 · 🪨 bloqueia · +2/ficha restante</div>
+        <div id="guard-section" style="margin-top:9px;display:none;">
+          <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
+          <div class="guard-btns">
+            <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+            <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
+            <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+          </div>
+        </div>
+        <div id="waiting-turn" class="waiting-msg" style="display:none;">
+          ⏳ Vez de outro jogador...
         </div>
       </div>
-      <div class="game-panel">
-        <div id="my-color-badge-wrap"></div>
-        <div id="drawn-section">
-          <div style="font-weight:700;margin-bottom:9px;color:var(--dark)">🃏 Tile Retirado</div>
-          <div class="panel-row">
-            <div class="drawn-tile-wrap">
-              <div class="drawn-tile" id="drawn-tile-display">?</div>
-              <div>
-                <div id="drawn-tile-desc" style="font-size:.82rem;color:#555"></div>
-                <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
-              </div>
-            </div>
-          </div>
-          <div id="guard-section" style="margin-top:11px;display:none;">
-            <div style="font-size:.88rem;color:#555;margin-bottom:7px">Colocar salva-vidas?</div>
-            <div class="guard-btns">
-              <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
-              <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-              <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
-            </div>
-          </div>
-          <div id="waiting-turn" style="display:none;margin-top:11px;font-size:.88rem;color:#888;text-align:center;">
-            ⏳ Vez de outro jogador...
-          </div>
-        </div>
-        <hr style="margin:13px 0;border:none;border-top:1px solid #ddd;"/>
-        <div style="font-weight:700;color:var(--dark);margin-bottom:7px">🎯 Objetivos</div>
+
+      <!-- Right: objectives -->
+      <div class="panel-objectives">
+        <div class="panel-label">🎯 Objetivos</div>
         <div class="obj-list" id="obj-list"></div>
-        <div class="credits" style="text-align:center;margin-top:14px;">um jogo de David Marques</div>
+        <div class="credits-small">um jogo de David Marques</div>
       </div>
     </div>
   </div>
@@ -1381,7 +1392,7 @@ function renderGame(state) {
     const canV = avail ? avail.v : true;
     document.getElementById('btn-guard-h').disabled = isRock || noFichas || !canH;
     document.getElementById('btn-guard-v').disabled = isRock || noFichas || !canV;
-    const guardLabel = document.getElementById('guard-section').querySelector('div');
+    const guardLabel = document.getElementById('guard-label-text');
     if (isRock) {
       guardLabel.textContent = '🪨 Rocha — sem salva-vidas';
     } else if (!canH && !canV) {
