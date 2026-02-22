@@ -942,8 +942,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;white-space:nowrap;}
 
   /* Bottom panel: 2 columns */
-  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;max-height:220px;}
-  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow-y:auto;}
+  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:180px;}
+  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow-y:auto;display:flex;flex-direction:column;align-items:flex-start;}
   .panel-objectives{flex:1;padding:12px 16px;overflow-y:auto;}
   .panel-label{font-weight:700;color:var(--dark);margin-bottom:8px;font-size:.88rem;}
   .drawn-tile-wrap{display:flex;align-items:center;gap:10px;}
@@ -1110,16 +1110,19 @@ const CLIENT_HTML = `<!DOCTYPE html>
             <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
           </div>
         </div>
-        <div id="guard-section" style="margin-top:9px;display:none;">
-          <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
-          <div class="guard-btns">
-            <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
-            <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-            <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+        <!-- guard + waiting always occupy same fixed space -->
+        <div style="margin-top:9px;min-height:60px;position:relative;">
+          <div id="guard-section" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
+            <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
+            <div class="guard-btns">
+              <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+              <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+            </div>
           </div>
-        </div>
-        <div id="waiting-turn" class="waiting-msg" style="display:none;">
-          ⏳ Vez de outro jogador...
+          <div id="waiting-turn" class="waiting-msg" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
+            ⏳ Vez de outro jogador...
+          </div>
         </div>
       </div>
 
@@ -1127,7 +1130,6 @@ const CLIENT_HTML = `<!DOCTYPE html>
       <div class="panel-objectives">
         <div class="panel-label">🎯 Objetivos</div>
         <div class="obj-list" id="obj-list"></div>
-        <div class="credits-small">um jogo de David Marques</div>
       </div>
     </div>
   </div>
@@ -1139,7 +1141,6 @@ const CLIENT_HTML = `<!DOCTYPE html>
   <div class="winner-banner" id="end-winner"></div>
   <table class="score-table" id="score-table"></table>
   <button class="btn btn-primary" id="btn-restart" style="width:100%">↺ Nova Partida</button>
-  <div class="credits">um jogo de David Marques</div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -1378,12 +1379,17 @@ function renderGame(state) {
     dtDesc.textContent = '';
   }
 
-  // Guard section — disable based on server-provided availability
+  // Guard section — use opacity to avoid layout shift
   const guardSec = document.getElementById('guard-section');
   const waitingTurn = document.getElementById('waiting-turn');
-  if (isMyTurn && phase==='PLACE_GUARD') {
-    guardSec.style.display='block';
-    waitingTurn.style.display='none';
+  const showGuard = isMyTurn && phase==='PLACE_GUARD';
+  const showWaiting = !isMyTurn && phase!=='GAME_OVER';
+  guardSec.style.opacity = showGuard ? '1' : '0';
+  guardSec.style.pointerEvents = showGuard ? 'auto' : 'none';
+  waitingTurn.style.opacity = showWaiting ? '1' : '0';
+  waitingTurn.style.pointerEvents = showWaiting ? 'auto' : 'none';
+
+  if (showGuard) {
     const avail = state.availableGuardDirs;
     const la = state.lastAction;
     const isRock = la && la.tile && la.tile.type === 'rock';
@@ -1404,9 +1410,6 @@ function renderGame(state) {
     } else {
       guardLabel.textContent = 'Colocar salva-vidas?';
     }
-  } else {
-    guardSec.style.display='none';
-    waitingTurn.style.display = (!isMyTurn && phase!=='GAME_OVER') ? 'block' : 'none';
   }
 
   // Board
