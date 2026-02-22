@@ -353,14 +353,39 @@ function getValidPlacements(board) {
   return result;
 }
 
+// ─── Guard Line Check ──────────────────────────────────────────────────────────
+// Returns true if there's already a guard watching a given row (dir='h') or col (dir='v')
+function lineHasGuard(guards, r, c, dir) {
+  return guards.some(g => g.dir === dir && (dir === 'h' ? g.r === r : g.c === c));
+}
+
+function getAvailableGuardDirs(guards, r, c) {
+  return {
+    h: !lineHasGuard(guards, r, c, 'h'),
+    v: !lineHasGuard(guards, r, c, 'v'),
+  };
+}
+
 // ─── Build View ────────────────────────────────────────────────────────────────
 function buildView(g, seat) {
   const boardArr = Object.entries(g.board).map(([key, tile]) => {
     const [r,c] = key.split(',').map(Number);
     return { r, c, ...tile };
   });
-  const validPlacements = g.phase === 'PLACE_TILE' && g.currentPlayer === seat && g.drawnTile
+  const validPlacements = (g.phase === 'PLACE_TILE' || g.phase === 'PLACE_TILE_EXTRA') && g.currentPlayer === seat && g.drawnTile
     ? getValidPlacements(g.board) : [];
+
+  // For guard phase, tell client which directions are available
+  let availableGuardDirs = null;
+  if (g.phase === 'PLACE_GUARD' && g.currentPlayer === seat && g.pendingPlacement) {
+    const { r, c } = g.pendingPlacement;
+    const tile = boardGet(g.board, r, c);
+    if (tile && tile.type !== 'rock') {
+      availableGuardDirs = getAvailableGuardDirs(g.guards, r, c);
+    } else {
+      availableGuardDirs = { h: false, v: false };
+    }
+  }
 
   return {
     mySeat: seat,
@@ -377,6 +402,7 @@ function buildView(g, seat) {
     validPlacements,
     lastAction: g.lastAction,
     myFichas: g.players[seat].fichas,
+    availableGuardDirs,
   };
 }
 
@@ -506,12 +532,23 @@ function botGuard(lobby, r, c, seat) {
   const tile = boardGet(g.board, r, c);
   // don't place on rock
   if (tile && tile.type === 'rock') { nextTurn(lobby); return; }
-  // decide: place guard if fichas > 2 and line looks valuable
+
+  // check which directions are available (no existing guard in that line/col)
+  const canH = !lineHasGuard(g.guards, r, c, 'h');
+  const canV = !lineHasGuard(g.guards, r, c, 'v');
+
+  // decide: place guard if fichas > 0 and line looks valuable
   const rowLen = Object.keys(g.board).filter(k => +k.split(',')[0] === r).length;
   const colLen = Object.keys(g.board).filter(k => +k.split(',')[1] === c).length;
   const shouldPlace = g.players[seat].fichas > 0 && (rowLen + colLen > 3 || Math.random() > 0.4);
-  if (shouldPlace && g.players[seat].fichas > 0) {
-    const dir = rowLen >= colLen ? 'h' : 'v';
+
+  if (shouldPlace && g.players[seat].fichas > 0 && (canH || canV)) {
+    // pick best available direction
+    let dir;
+    if (canH && canV) dir = rowLen >= colLen ? 'h' : 'v';
+    else if (canH) dir = 'h';
+    else dir = 'v';
+
     g.players[seat].fichas--;
     g.guards.push({ r, c, dir, playerIdx: seat, id: g.guardIdSeq++ });
     if (g.players[seat].fichas === 0) { handleFichasEmpty(lobby, seat); return; }
@@ -618,6 +655,12 @@ function handleAction(ws, msg) {
       const tile = boardGet(g.board, r, c);
       if (tile && tile.type === 'rock') {
         sendTo(ws, { type: 'ERROR', text: 'Não podes colocar salva-vidas em rochas' });
+        sendTo(ws, { type: 'GAME_STATE', state: buildView(g, seat) });
+        return;
+      }
+      if (lineHasGuard(g.guards, r, c, dir)) {
+        sendTo(ws, { type: 'ERROR', text: 'Já existe um salva-vidas nessa ' + (dir === 'h' ? 'linha' : 'coluna') });
+        sendTo(ws, { type: 'GAME_STATE', state: buildView(g, seat) });
         return;
       }
       if (g.players[seat].fichas <= 0) {
@@ -816,9 +859,14 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
   /* ── Name Screen ── */
   #screen-name{justify-content:center;gap:22px;text-align:center;}
-  .logo{font-size:4rem;filter:drop-shadow(2px 4px 8px rgba(0,0,0,.2));}
-  .title{font-size:2.2rem;font-weight:900;color:var(--deep);text-shadow:2px 2px 4px rgba(0,0,0,.15);}
-  .subtitle{font-size:1rem;color:#555;margin-top:-10px;}
+  .sunset-title{
+    font-size:3.2rem;font-weight:900;letter-spacing:-.02em;
+    background:linear-gradient(135deg,#ff4e00 0%,#ec9f05 25%,#ff6b35 50%,#f7c59f 70%,#fffae0 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    text-shadow:none;line-height:1.1;
+    filter:drop-shadow(0 4px 16px rgba(255,100,0,.25));
+  }
+  .subtitle{font-size:1rem;color:#666;margin-top:-10px;}
   .inp-wrap{display:flex;gap:10px;width:100%;max-width:420px;}
   input{flex:1;padding:14px 18px;border:2px solid var(--sea2);border-radius:14px;font-size:1rem;outline:none;background:#ffffffe0;}
   input:focus{border-color:var(--deep);}
@@ -868,15 +916,15 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .game-main{display:flex;flex-direction:column;align-items:center;flex:1;padding:14px;gap:14px;}
   .board-wrap{position:relative;overflow:auto;max-width:100%;max-height:58vh;}
   .board-canvas{position:relative;}
-  .tile{position:absolute;width:68px;height:68px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.3rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
+  .tile{position:absolute;width:84px;height:84px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
   .tile.normal{background:linear-gradient(135deg,var(--sand),var(--sand2));}
   .tile.surf{background:linear-gradient(135deg,#ff9f1c,#ffbf69);}
   .tile.rock{background:linear-gradient(135deg,#8d8d8d,#555);color:#fff;}
   .tile.start-tile{border:2px solid var(--deep);}
-  .tile .bathers{font-size:.68rem;color:#444;margin-top:2px;}
+  .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
   .tile.rock .bathers{color:#ddd;}
-  .tile .guard-marker{position:absolute;top:2px;right:2px;font-size:.72rem;line-height:1;}
-  .valid-cell{position:absolute;width:68px;height:68px;border-radius:10px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.6rem;}
+  .tile .guard-marker{position:absolute;top:3px;right:3px;font-size:.75rem;line-height:1;}
+  .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
 
   /* ── Panel ── */
@@ -915,8 +963,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
 <!-- Name Screen -->
 <div id="screen-name" class="screen active">
-  <div class="logo">🏖</div>
-  <div class="title">Na Praia das Percebes</div>
+  <div class="sunset-title">Praia das Percebes</div>
   <div class="subtitle">Jogo de colocação de tiles para 2–4 jogadores</div>
   <div class="inp-wrap">
     <input id="inp-name" placeholder="O teu nome..." maxlength="20" autocomplete="off"/>
@@ -1179,7 +1226,7 @@ function renderGame(state) {
   const sw = document.createElement('div');
   sw.style.cssText = 'width:14px;height:14px;border-radius:3px;background:'+PLAYER_COLORS[state.mySeat];
   badge.appendChild(sw);
-  badge.appendChild(document.createTextNode('Tu: ' + state.players[state.mySeat]?.name));
+  badge.appendChild(document.createTextNode(state.players[state.mySeat]?.name));
   badgeWrap.appendChild(badge);
 
   // Top bar players
@@ -1232,23 +1279,31 @@ function renderGame(state) {
     dtDesc.textContent = '';
   }
 
-  // Guard section — disable if rock tile
+  // Guard section — disable based on server-provided availability
   const guardSec = document.getElementById('guard-section');
   const waitingTurn = document.getElementById('waiting-turn');
   if (isMyTurn && phase==='PLACE_GUARD') {
     guardSec.style.display='block';
     waitingTurn.style.display='none';
-    // Check if placed tile is a rock
+    const avail = state.availableGuardDirs;
     const la = state.lastAction;
     const isRock = la && la.tile && la.tile.type === 'rock';
     const noFichas = state.myFichas <= 0;
-    document.getElementById('btn-guard-h').disabled = isRock || noFichas;
-    document.getElementById('btn-guard-v').disabled = isRock || noFichas;
+    const canH = avail ? avail.h : true;
+    const canV = avail ? avail.v : true;
+    document.getElementById('btn-guard-h').disabled = isRock || noFichas || !canH;
+    document.getElementById('btn-guard-v').disabled = isRock || noFichas || !canV;
+    const guardLabel = document.getElementById('guard-section').querySelector('div');
     if (isRock) {
-      // auto-skip for rock — show message
-      document.getElementById('guard-section').querySelector('div').textContent = '🪨 Rocha — sem salva-vidas';
+      guardLabel.textContent = '🪨 Rocha — sem salva-vidas';
+    } else if (!canH && !canV) {
+      guardLabel.textContent = '🚫 Linha e coluna já têm salva-vidas';
+    } else if (!canH) {
+      guardLabel.textContent = '↕ Só vertical disponível';
+    } else if (!canV) {
+      guardLabel.textContent = '↔ Só horizontal disponível';
     } else {
-      document.getElementById('guard-section').querySelector('div').textContent = 'Colocar salva-vidas?';
+      guardLabel.textContent = 'Colocar salva-vidas?';
     }
   } else {
     guardSec.style.display='none';
@@ -1264,8 +1319,8 @@ function renderGame(state) {
 function renderBoard(state) {
   const canvas = document.getElementById('board-canvas');
   canvas.innerHTML = '';
-  const TILE_SIZE = 68;
-  const GAP = 5;
+  const TILE_SIZE = 84;
+  const GAP = 6;
   const STEP = TILE_SIZE + GAP;
   const board = state.board || [];
   if (board.length === 0) return;
