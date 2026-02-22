@@ -512,14 +512,25 @@ function botMove(lobby) {
         if (g.remainingObjs.length > 0) g.revealedObjs.push(g.remainingObjs.shift());
       }
     }
-    g.phase = 'PLACE_GUARD';
-    broadcastGame(lobby);
-    // schedule guard decision
-    const gen = g.turnGen;
-    setTimeout(() => {
-      if (!lobby.game || lobby.game.turnGen !== gen) return;
-      botGuard(lobby, pick.r, pick.c, seat);
-    }, 800);
+    // Check if guard phase is needed
+    const tileIsRock = g.board[pick.r + ',' + pick.c]?.type === 'rock';
+    const canH = !lineHasGuard(g.guards, pick.r, pick.c, 'h');
+    const canV = !lineHasGuard(g.guards, pick.r, pick.c, 'v');
+    const hasGuardOption = !tileIsRock && (canH || canV) && g.players[seat].fichas > 0;
+
+    if (!hasGuardOption) {
+      g.pendingPlacement = null;
+      nextTurn(lobby);
+    } else {
+      g.phase = 'PLACE_GUARD';
+      broadcastGame(lobby);
+      // schedule guard decision
+      const gen = g.turnGen;
+      setTimeout(() => {
+        if (!lobby.game || lobby.game.turnGen !== gen) return;
+        botGuard(lobby, pick.r, pick.c, seat);
+      }, 800);
+    }
   } else if (g.phase === 'PLACE_GUARD') {
     const { r, c } = g.pendingPlacement;
     botGuard(lobby, r, c, seat);
@@ -641,10 +652,21 @@ function handleAction(ws, msg) {
         }
       }
 
-      // Move to guard decision phase (handled client-side, we await PLACE_GUARD or SKIP_GUARD)
-      g.phase = 'PLACE_GUARD';
-      g.pendingPlacement = { r, c };
-      broadcastGame(lobby);
+      // Move to guard decision phase — but skip immediately if rock or no fichas
+      const placedIsRock = placedTile.type === 'rock';
+      const availH = !lineHasGuard(g.guards, r, c, 'h');
+      const availV = !lineHasGuard(g.guards, r, c, 'v');
+      const hasAnyGuardDir = !placedIsRock && (availH || availV) && g.players[seat].fichas > 0;
+
+      if (!hasAnyGuardDir) {
+        // Skip guard phase entirely — go straight to next turn
+        g.pendingPlacement = null;
+        nextTurn(lobby);
+      } else {
+        g.phase = 'PLACE_GUARD';
+        g.pendingPlacement = { r, c };
+        broadcastGame(lobby);
+      }
       break;
     }
     case 'PLACE_GUARD': {
@@ -943,7 +965,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
   /* Bottom panel: 2 columns */
   .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:220px;}
-  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;}
+  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;}
   .panel-objectives{flex:1;padding:12px 16px;overflow:hidden;}
   .panel-label{font-weight:700;color:var(--dark);margin-bottom:5px;font-size:.85rem;}
   .turn-cols{display:flex;gap:12px;align-items:flex-start;flex:1;}
@@ -1385,37 +1407,44 @@ function renderGame(state) {
     dtDesc.textContent = '';
   }
 
-  // Guard section — use opacity to avoid layout shift
+  // Guard section — auto-skip if rock or no dirs, otherwise show buttons
   const guardSec = document.getElementById('guard-section');
   const waitingTurn = document.getElementById('waiting-turn');
   const showGuard = isMyTurn && phase==='PLACE_GUARD';
   const showWaiting = !isMyTurn && phase!=='GAME_OVER';
-  guardSec.style.opacity = showGuard ? '1' : '0';
-  guardSec.style.pointerEvents = showGuard ? 'auto' : 'none';
-  waitingTurn.style.opacity = showWaiting ? '1' : '0';
-  waitingTurn.style.pointerEvents = showWaiting ? 'auto' : 'none';
 
   if (showGuard) {
     const avail = state.availableGuardDirs;
-    const la = state.lastAction;
-    const isRock = la && la.tile && la.tile.type === 'rock';
     const noFichas = state.myFichas <= 0;
     const canH = avail ? avail.h : true;
     const canV = avail ? avail.v : true;
-    document.getElementById('btn-guard-h').disabled = isRock || noFichas || !canH;
-    document.getElementById('btn-guard-v').disabled = isRock || noFichas || !canV;
-    const guardLabel = document.getElementById('guard-label-text');
-    if (isRock) {
-      guardLabel.textContent = '🪨 Rocha — sem salva-vidas';
-    } else if (!canH && !canV) {
-      guardLabel.textContent = '🚫 Linha e coluna já têm salva-vidas';
-    } else if (!canH) {
-      guardLabel.textContent = '↕ Só vertical disponível';
-    } else if (!canV) {
-      guardLabel.textContent = '↔ Só horizontal disponível';
+    const noDirs = !canH && !canV;
+
+    if (noDirs || noFichas) {
+      // Rock or line-blocked or no fichas — auto-skip, no UI needed
+      guardSec.style.opacity = '0';
+      guardSec.style.pointerEvents = 'none';
+      waitingTurn.style.opacity = '0';
+      waitingTurn.style.pointerEvents = 'none';
+      send({type:'SKIP_GUARD'});
     } else {
-      guardLabel.textContent = 'Colocar salva-vidas?';
+      guardSec.style.opacity = '1';
+      guardSec.style.pointerEvents = 'auto';
+      waitingTurn.style.opacity = '0';
+      waitingTurn.style.pointerEvents = 'none';
+      document.getElementById('btn-guard-h').disabled = !canH;
+      document.getElementById('btn-guard-v').disabled = !canV;
+      document.getElementById('btn-guard-skip').disabled = false;
+      const guardLabel = document.getElementById('guard-label-text');
+      guardLabel.textContent = (!canH) ? '↕ Só vertical disponível'
+        : (!canV) ? '↔ Só horizontal disponível'
+        : 'Colocar salva-vidas?';
     }
+  } else {
+    guardSec.style.opacity = '0';
+    guardSec.style.pointerEvents = 'none';
+    waitingTurn.style.opacity = showWaiting ? '1' : '0';
+    waitingTurn.style.pointerEvents = showWaiting ? 'auto' : 'none';
   }
 
   // Board
