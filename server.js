@@ -861,10 +861,10 @@ const CLIENT_HTML = `<!DOCTYPE html>
   #screen-name{justify-content:center;gap:22px;text-align:center;}
   .sunset-title{
     font-size:3.2rem;font-weight:900;letter-spacing:-.02em;
-    background:linear-gradient(135deg,#ff4e00 0%,#ec9f05 25%,#ff6b35 50%,#f7c59f 70%,#fffae0 100%);
+    background:linear-gradient(135deg,#e85d04 0%,#f48c06 45%,#faa307 100%);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     text-shadow:none;line-height:1.1;
-    filter:drop-shadow(0 4px 16px rgba(255,100,0,.25));
+    filter:drop-shadow(0 4px 20px rgba(232,93,4,.3));
   }
   .subtitle{font-size:1rem;color:#666;margin-top:-10px;}
   .inp-wrap{display:flex;gap:10px;width:100%;max-width:420px;}
@@ -905,16 +905,21 @@ const CLIENT_HTML = `<!DOCTYPE html>
   #screen-game{padding:0;gap:0;max-width:100%;align-items:stretch;}
   .game-topbar{background:var(--deep);color:#fff;padding:10px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;}
   .topbar-players{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .topbar-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .topbar-title{text-align:center;font-size:.9rem;font-weight:700;color:#caf0f8;white-space:nowrap;}
-  .game-status{font-size:.82rem;color:#caf0f8;text-align:right;}
+  .game-status{font-size:.82rem;color:#caf0f8;}
   .tp{padding:5px 11px;border-radius:20px;font-size:.8rem;font-weight:700;background:#ffffff20;display:flex;align-items:center;gap:6px;}
   .tp.active{background:#ffffff40;outline:2px solid #ffd166;}
   .tp.me{outline:2px solid #06d6a0;}
   .tp-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+  .btn-rules{background:#ffffff22;border:1px solid #ffffff44;color:#fff;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-rules:hover{background:#ffffff33;}
 
   /* ── Board ── */
-  .game-main{display:flex;flex-direction:column;align-items:center;flex:1;padding:14px;gap:14px;}
-  .board-wrap{position:relative;overflow:auto;max-width:100%;max-height:58vh;}
+  .game-main{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:14px;gap:14px;}
+  .board-and-panel{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;}
+  .board-area{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1;}
+  .board-wrap{position:relative;overflow:auto;max-width:100%;max-height:55vh;}
   .board-canvas{position:relative;}
   .tile{position:absolute;width:84px;height:84px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
   .tile.normal{background:linear-gradient(135deg,var(--sand),var(--sand2));}
@@ -926,6 +931,13 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile .guard-marker{position:absolute;top:3px;right:3px;font-size:.75rem;line-height:1;}
   .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
+
+  /* ── Turn Guide ── */
+  .turn-guide{background:#ffffffb0;backdrop-filter:blur(6px);border-radius:14px;padding:10px 16px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:.75rem;color:#444;border:1px solid #e0e0e0;}
+  .tg-step{display:flex;align-items:center;gap:5px;white-space:nowrap;}
+  .tg-num{width:20px;height:20px;border-radius:50%;background:var(--deep);color:#fff;font-size:.7rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .tg-arrow{color:#aaa;font-size:.8rem;}
+  .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;}
 
   /* ── Panel ── */
   .game-panel{background:#ffffffd0;border-radius:18px;padding:14px 18px;width:100%;max-width:560px;}
@@ -942,6 +954,19 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .obj-card.claimed{background:#d8f3dc;text-decoration:line-through;color:#666;}
   .obj-pts{font-weight:800;color:var(--deep);}
 
+  /* ── Rules Modal ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;display:flex;align-items:center;justify-content:center;padding:16px;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:#fff;border-radius:20px;padding:24px 28px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);}
+  .modal h2{font-size:1.3rem;color:var(--deep);margin-bottom:14px;}
+  .modal h3{font-size:.95rem;color:var(--deep);margin:14px 0 6px;font-weight:800;}
+  .modal p,.modal li{font-size:.85rem;color:#444;line-height:1.5;}
+  .modal ul{padding-left:18px;display:flex;flex-direction:column;gap:4px;}
+  .modal-close{float:right;background:none;border:none;font-size:1.4rem;cursor:pointer;color:#666;line-height:1;}
+  .rule-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px;}
+  .rule-num{width:24px;height:24px;border-radius:50%;background:var(--deep);color:#fff;font-size:.78rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+  .score-pill{display:inline-block;background:#e8f4f8;color:var(--deep);border-radius:6px;padding:2px 7px;font-size:.78rem;font-weight:700;margin-left:4px;}
+
   /* ── End Screen ── */
   #screen-end{justify-content:center;gap:18px;text-align:center;max-width:460px;margin:0 auto;}
   .score-table{width:100%;border-collapse:collapse;border-radius:13px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.1);}
@@ -952,10 +977,11 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .winner-banner{font-size:1.9rem;font-weight:900;color:var(--deep);}
   .notif{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:13px 26px;border-radius:13px;font-size:.9rem;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center;}
   .notif.show{opacity:1;}
-  @media(min-width:750px){
-    .game-main{flex-direction:row;align-items:flex-start;}
-    .board-wrap{max-height:80vh;}
-    .game-panel{max-width:300px;}
+  @media(min-width:820px){
+    .board-and-panel{flex-direction:row;align-items:flex-start;justify-content:center;}
+    .board-area{align-items:flex-start;}
+    .board-wrap{max-height:78vh;}
+    .game-panel{max-width:300px;flex-shrink:0;}
   }
 </style>
 </head>
@@ -990,46 +1016,108 @@ const CLIENT_HTML = `<!DOCTYPE html>
   <button class="btn btn-secondary btn-sm" id="btn-leave">Sair da Mesa</button>
 </div>
 
+<!-- Rules Modal -->
+<div class="modal-overlay" id="modal-rules">
+  <div class="modal">
+    <button class="modal-close" id="btn-modal-close">✕</button>
+    <h2>📋 Regras — Praia das Percebes</h2>
+
+    <h3>🎯 Objetivo</h3>
+    <p>Coloca salva-vidas em tiles da praia. Cada salva-vidas vigia uma linha ou coluna inteira e no final do jogo vale os banhistas nessa linha/coluna.</p>
+
+    <h3>🔄 Sequência de Turno</h3>
+    <div class="rule-step"><div class="rule-num">1</div><p><b>Pescar tile</b> — retira automaticamente o tile do topo do deck.</p></div>
+    <div class="rule-step"><div class="rule-num">2</div><p><b>Colocar tile</b> — coloca-o ortogonalmente adjacente a um tile existente (nunca diagonal). Máximo 7 tiles por linha/coluna.</p></div>
+    <div class="rule-step"><div class="rule-num">3</div><p><b>Salva-vidas (opcional)</b> — coloca 1 salva-vidas no tile que acabaste de jogar: horizontal (↔) ou vertical (↕). Gasta 1 ficha. Só 1 salva-vidas por linha e por coluna em todo o tabuleiro.</p></div>
+    <div class="rule-step"><div class="rule-num">4</div><p><b>Verificar objetivos</b> — se completaste um objetivo revelado, recolhes a carta imediatamente.</p></div>
+
+    <h3>🏖 Tiles Especiais</h3>
+    <ul>
+      <li><b>🏄 Prancha de surf</b> — conta 1 banhista mas dobra todos os pontos dessa linha/coluna. Várias pranchas multiplicam (×4, ×8…).</li>
+      <li><b>🪨 Rocha</b> — vale 0 banhistas e bloqueia a linha/coluna. Não podes colocar salva-vidas em rochas.</li>
+    </ul>
+
+    <h3>💰 Pontuação (só no final)</h3>
+    <ul>
+      <li><b>Salva-vidas</b> — soma os banhistas no seu segmento de linha/coluna (parado em rochas), com multiplicadores de pranchas.</li>
+      <li><b>Fichas restantes</b> — +2 pts por cada ficha não gasta.</li>
+      <li><b>Objetivos</b> — soma os pontos das cartas conquistadas.</li>
+    </ul>
+
+    <h3>🏁 Fim de Jogo</h3>
+    <p>O jogo termina quando o deck esgota <b>ou</b> um jogador fica sem fichas (os outros jogam mais 1 turno cada).</p>
+
+    <h3>🎯 Objetivos Disponíveis</h3>
+    <ul>
+      <li>Quadrado 3×3 <span class="score-pill">+2</span></li>
+      <li>Quadrado 5×5 <span class="score-pill">+2</span></li>
+      <li>Linha de 5 tiles <span class="score-pill">+4</span></li>
+      <li>Coluna de 5 tiles <span class="score-pill">+4</span></li>
+      <li>2 Pranchas adjacentes <span class="score-pill">+4</span></li>
+      <li>Linha de 7 tiles <span class="score-pill">+6</span></li>
+      <li>Coluna de 7 tiles <span class="score-pill">+6</span></li>
+      <li>Excursão (2×2 tiles com 3 banhistas cada) <span class="score-pill">+6</span></li>
+    </ul>
+  </div>
+</div>
+
 <!-- Game Screen -->
 <div id="screen-game" class="screen">
   <div class="game-topbar">
     <div class="topbar-players" id="tp-players"></div>
     <div class="topbar-title">🏖 Praia das Percebes</div>
-    <div class="game-status" id="game-status">A aguardar...</div>
+    <div class="topbar-right">
+      <div class="game-status" id="game-status">A aguardar...</div>
+      <button class="btn-rules" id="btn-show-rules">📋 Regras</button>
+    </div>
   </div>
   <div class="game-main">
-    <div class="board-wrap">
-      <div class="board-canvas" id="board-canvas"></div>
-    </div>
-    <div class="game-panel">
-      <div id="my-color-badge-wrap"></div>
-      <div id="drawn-section">
-        <div style="font-weight:700;margin-bottom:9px;color:var(--dark)">🃏 Tile Retirado</div>
-        <div class="panel-row">
-          <div class="drawn-tile-wrap">
-            <div class="drawn-tile" id="drawn-tile-display">?</div>
-            <div>
-              <div id="drawn-tile-desc" style="font-size:.82rem;color:#555"></div>
-              <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
-            </div>
-          </div>
+    <div class="board-and-panel">
+      <div class="board-area">
+        <div class="board-wrap">
+          <div class="board-canvas" id="board-canvas"></div>
         </div>
-        <div id="guard-section" style="margin-top:11px;display:none;">
-          <div style="font-size:.88rem;color:#555;margin-bottom:7px">Colocar salva-vidas?</div>
-          <div class="guard-btns">
-            <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
-            <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-            <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
-          </div>
-        </div>
-        <div id="waiting-turn" style="display:none;margin-top:11px;font-size:.88rem;color:#888;text-align:center;">
-          ⏳ Vez de outro jogador...
+        <div class="turn-guide">
+          <div class="tg-step"><div class="tg-num">1</div> Pescar tile</div>
+          <div class="tg-arrow">›</div>
+          <div class="tg-step"><div class="tg-num">2</div> Colocar no tabuleiro</div>
+          <div class="tg-arrow">›</div>
+          <div class="tg-step"><div class="tg-num">3</div> Salva-vidas? (↔↕)</div>
+          <div class="tg-arrow">›</div>
+          <div class="tg-step"><div class="tg-num">4</div> Objetivos?</div>
+          <div class="tg-score">🛟 pontos = banhistas na linha · 🏄 ×2 · 🪨 bloqueia · +2/ficha restante</div>
         </div>
       </div>
-      <hr style="margin:13px 0;border:none;border-top:1px solid #ddd;"/>
-      <div style="font-weight:700;color:var(--dark);margin-bottom:7px">🎯 Objetivos</div>
-      <div class="obj-list" id="obj-list"></div>
-      <div class="credits" style="text-align:center;margin-top:14px;">um jogo de David Marques</div>
+      <div class="game-panel">
+        <div id="my-color-badge-wrap"></div>
+        <div id="drawn-section">
+          <div style="font-weight:700;margin-bottom:9px;color:var(--dark)">🃏 Tile Retirado</div>
+          <div class="panel-row">
+            <div class="drawn-tile-wrap">
+              <div class="drawn-tile" id="drawn-tile-display">?</div>
+              <div>
+                <div id="drawn-tile-desc" style="font-size:.82rem;color:#555"></div>
+                <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
+              </div>
+            </div>
+          </div>
+          <div id="guard-section" style="margin-top:11px;display:none;">
+            <div style="font-size:.88rem;color:#555;margin-bottom:7px">Colocar salva-vidas?</div>
+            <div class="guard-btns">
+              <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+              <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
+              <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+            </div>
+          </div>
+          <div id="waiting-turn" style="display:none;margin-top:11px;font-size:.88rem;color:#888;text-align:center;">
+            ⏳ Vez de outro jogador...
+          </div>
+        </div>
+        <hr style="margin:13px 0;border:none;border-top:1px solid #ddd;"/>
+        <div style="font-weight:700;color:var(--dark);margin-bottom:7px">🎯 Objetivos</div>
+        <div class="obj-list" id="obj-list"></div>
+        <div class="credits" style="text-align:center;margin-top:14px;">um jogo de David Marques</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1464,6 +1552,18 @@ document.getElementById('btn-restart').onclick = () => {
 document.getElementById('btn-guard-h').onclick = () => send({type:'PLACE_GUARD', dir:'h'});
 document.getElementById('btn-guard-v').onclick = () => send({type:'PLACE_GUARD', dir:'v'});
 document.getElementById('btn-guard-skip').onclick = () => send({type:'SKIP_GUARD'});
+
+// ── Rules Modal ────────────────────────────────────────────────────────────────
+document.getElementById('btn-show-rules').onclick = () => {
+  document.getElementById('modal-rules').classList.add('open');
+};
+document.getElementById('btn-modal-close').onclick = () => {
+  document.getElementById('modal-rules').classList.remove('open');
+};
+document.getElementById('modal-rules').onclick = (e) => {
+  if (e.target === document.getElementById('modal-rules'))
+    document.getElementById('modal-rules').classList.remove('open');
+};
 
 // ── Tile Helpers ───────────────────────────────────────────────────────────────
 function tileEmoji(tile) {
