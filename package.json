@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Jogo Na Praia das Percebes online",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
