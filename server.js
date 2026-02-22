@@ -946,7 +946,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;align-items:flex-start;}
   .panel-objectives{flex:1;padding:12px 16px;overflow:hidden;}
   .panel-label{font-weight:700;color:var(--dark);margin-bottom:5px;font-size:.85rem;}
-  .drawn-tile-wrap{display:flex;align-items:center;gap:10px;}
+  .turn-cols{display:flex;gap:12px;align-items:flex-start;flex:1;}
+  .turn-col-tile{flex-shrink:0;}
+  .turn-col-actions{flex:1;min-width:0;}
   .drawn-tile{width:52px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.3rem;border:3px solid var(--deep);flex-shrink:0;}
   .fichas-count{font-size:.8rem;color:#555;margin-top:2px;}
   .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:5px;}
@@ -1099,29 +1101,33 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
     <!-- Bottom 2-column panel -->
     <div class="bottom-panel">
-      <!-- Left: turn actions -->
+      <!-- Left: turn actions (2 sub-cols: tile | actions) -->
       <div class="panel-turn">
         <div id="my-color-badge-wrap"></div>
         <div class="panel-label">🃏 Tile Retirado</div>
-        <div class="drawn-tile-wrap">
-          <div class="drawn-tile" id="drawn-tile-display">?</div>
-          <div>
-            <div id="drawn-tile-desc" style="font-size:.8rem;color:#555"></div>
+        <div class="turn-cols">
+          <!-- Sub-left: the tile itself -->
+          <div class="turn-col-tile">
+            <div class="drawn-tile" id="drawn-tile-display">?</div>
+          </div>
+          <!-- Sub-right: desc + fichas + guard buttons -->
+          <div class="turn-col-actions">
+            <div id="drawn-tile-desc" style="font-size:.8rem;color:#555;margin-bottom:2px;"></div>
             <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
-          </div>
-        </div>
-        <!-- guard + waiting always occupy same fixed space -->
-        <div style="margin-top:6px;min-height:60px;position:relative;">
-          <div id="guard-section" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
-            <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
-            <div class="guard-btns">
-              <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
-              <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-              <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+            <!-- guard + waiting always occupy same fixed space -->
+            <div style="margin-top:6px;min-height:60px;position:relative;">
+              <div id="guard-section" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
+                <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
+                <div class="guard-btns">
+                  <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+                  <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
+                  <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+                </div>
+              </div>
+              <div id="waiting-turn" class="waiting-msg" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
+                ⏳ Vez de outro jogador...
+              </div>
             </div>
-          </div>
-          <div id="waiting-turn" class="waiting-msg" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
-            ⏳ Vez de outro jogador...
           </div>
         </div>
       </div>
