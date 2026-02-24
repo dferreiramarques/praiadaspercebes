@@ -51,18 +51,19 @@ for (const cfg of AI_TABLE_CONFIGS) {
 }
 
 // ─── Tile / Deck Definitions ──────────────────────────────────────────────────
-// tile: { id, bathers, type } type: 'normal'|'surf'|'rock'|'sand'
+// tile: { id, bathers, type, variantIdx } type: 'normal'|'surf'|'rock'|'sand'
+// variantIdx: sequential index within category (1-based), used for unique tile images
 // Base deck: 44 tiles total
 // 4 surf, 2 rock, 6×3-bathers, 12×2-bathers, 8×1-bather, 12 sand
 function buildDeck(nPlayers) {
   const tiles = [];
   let id = 1;
-  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 1, type: 'normal' });
-  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 2, type: 'normal' });
-  for (let i = 0; i < 6;  i++) tiles.push({ id: id++, bathers: 3, type: 'normal' });
-  for (let i = 0; i < 4;  i++) tiles.push({ id: id++, bathers: 1, type: 'surf' });
-  for (let i = 0; i < 2;  i++) tiles.push({ id: id++, bathers: 0, type: 'rock' });
-  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 0, type: 'sand' });
+  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 1, type: 'normal', variantIdx: i+1 });
+  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 2, type: 'normal', variantIdx: i+1 });
+  for (let i = 0; i < 6;  i++) tiles.push({ id: id++, bathers: 3, type: 'normal', variantIdx: i+1 });
+  for (let i = 0; i < 4;  i++) tiles.push({ id: id++, bathers: 1, type: 'surf',   variantIdx: i+1 });
+  for (let i = 0; i < 2;  i++) tiles.push({ id: id++, bathers: 0, type: 'rock',   variantIdx: i+1 });
+  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 0, type: 'sand',   variantIdx: i+1 });
   // shuffle
   for (let i = tiles.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -1038,7 +1039,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
   /* Board zone — fills available space, board centered inside */
   .board-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;position:relative;padding:14px 14px 0;}
-  .board-scroll{overflow:auto;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;}
+  .board-scroll{overflow:auto;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;scrollbar-width:none;}
+  .board-scroll::-webkit-scrollbar{display:none;}
   .board-canvas{position:relative;margin:auto;}
 
   .tile{position:absolute;width:84px;height:84px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
@@ -1049,7 +1051,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile.start-tile{border:2px solid var(--deep);}
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
   .tile.rock .bathers{color:#ddd;}
-  .tile .guard-marker{position:absolute;top:3px;right:3px;font-size:1.5rem;line-height:1;}
+  .tile-img{width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;}
+  .drawn-tile .tile-img{width:100%;height:100%;object-fit:contain;border-radius:10px;}
   .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
 
@@ -1165,10 +1168,10 @@ const CLIENT_HTML = `<!DOCTYPE html>
       z-index: 10;
       box-shadow: 0 -2px 10px rgba(0,0,0,.12);
     }
-    .panel-turn { border-right: none; padding: 5px 10px; flex: 1; flex-shrink: 0; }
+    .panel-turn { border-right: none; padding: 15px 10px; flex: 1; flex-shrink: 0; }
     .panel-objectives { display: none; }
     /* Give the game-body padding so content isn't hidden behind fixed panel */
-    .game-body { padding-bottom: 120px; }
+    .game-body { padding-bottom: 140px; }
 
     /* Badge row compact */
     .my-color-badge { font-size: .7rem; padding: 2px 6px; }
@@ -1671,7 +1674,7 @@ function renderGame(state) {
   const dtDesc = document.getElementById('drawn-tile-desc');
   if (isMyTurn && state.drawnTile && !state.drawnTile.hidden) {
     const tile = state.drawnTile;
-    dtd.textContent = tileEmoji(tile);
+    dtd.innerHTML = tileEmoji(tile);
     dtd.className = 'drawn-tile '+tile.type;
     dtDesc.textContent = tileLabel(tile);
   } else if (state.drawnTile) {
@@ -1770,7 +1773,7 @@ function renderBoard(state) {
     div.style.width = TILE_SIZE+'px';
     div.style.height = TILE_SIZE+'px';
     const emojiEl = document.createElement('div');
-    emojiEl.textContent = tileEmoji(tile);
+    emojiEl.innerHTML = tileEmoji(tile);
     div.appendChild(emojiEl);
     const bathEl = document.createElement('div');
     bathEl.className = 'bathers';
@@ -1945,13 +1948,26 @@ document.getElementById('modal-rules').onclick = (e) => {
 };
 
 // ── Tile Helpers ───────────────────────────────────────────────────────────────
-function tileEmoji(tile) {
+function tileImgName(tile) {
+  if (!tile.variantIdx) return null;
+  if (tile.type === 'normal') return `tile-normal-${tile.bathers}-${tile.variantIdx}.png`;
+  return `tile-${tile.type}-${tile.variantIdx}.png`;
+}
+function tileEmojiStr(tile) {
   if (tile.type==='rock') return '🪨';
   if (tile.type==='surf') return '🏄';
   if (tile.type==='sand') return '🏖️';
   if (tile.bathers===1) return '🧍';
   if (tile.bathers===2) return '👫';
   return '👨‍👩‍👦';
+}
+function tileEmoji(tile) {
+  const img = tileImgName(tile);
+  if (img) {
+    // Return img tag; onerror falls back to emoji span
+    return `<img src="/public/${img}" class="tile-img" alt="${tileEmojiStr(tile)}" onerror="this.outerHTML='<span>${tileEmojiStr(tile)}</span>'">`;
+  }
+  return tileEmojiStr(tile);
 }
 function tileLabel(tile) {
   if (tile.type==='rock') return 'Rocha';
