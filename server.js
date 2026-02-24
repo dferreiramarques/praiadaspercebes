@@ -523,6 +523,7 @@ function botMove(lobby) {
     scored.sort((a,b) => b.score - a.score);
     const pick = scored[0];
     boardSet(g.board, pick.r, pick.c, g.drawnTile);
+    g.lastAction = { type: 'PLACE', r: pick.r, c: pick.c, playerIdx: seat };
     g.pendingPlacement = { r: pick.r, c: pick.c };
     g.drawnTile = null;
     // check objectives
@@ -1105,12 +1106,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile.sand{background:linear-gradient(135deg,#f5deb3,#e8c97a);}
   .tile.start-tile{border:2px solid var(--deep);}
   @keyframes tile-pulse {
-    0%   { box-shadow: 0 0 0 0px rgba(255,255,255,.9), 0 0 0 0px rgba(2,62,138,.5); transform: scale(1); }
-    40%  { box-shadow: 0 0 0 6px rgba(255,255,255,.4), 0 0 0 12px rgba(2,62,138,.15); transform: scale(1.08); }
-    100% { box-shadow: 0 0 0 0px rgba(255,255,255,0), 0 0 0 0px rgba(2,62,138,0); transform: scale(1); }
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
   }
   .tile.last-placed {
-    animation: tile-pulse 0.7s ease-out 2;
+    animation: tile-pulse 0.6s ease-in-out 2;
     z-index: 5;
   }
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
