@@ -860,9 +860,15 @@ function handleReconnect(ws, msg) {
   if (!sess) { sendTo(ws, { type: 'RECONNECT_FAIL' }); return; }
   const lobby = lobbies[sess.lobbyId];
   if (!lobby) { sendTo(ws, { type: 'RECONNECT_FAIL' }); return; }
-  // If game is over or lobby was already reset, reject reconnect so slot stays free
+  // If game is over, free the slot immediately and reject reconnect
   if (!lobby.game || lobby.game.phase === 'GAME_OVER') {
+    const { seat } = sess;
     delete sessions[msg.token];
+    if (lobby.graceTimers[seat]) { clearTimeout(lobby.graceTimers[seat]); lobby.graceTimers[seat] = null; }
+    lobby.players[seat] = null;
+    lobby.names[seat] = '';
+    lobby.tokens[seat] = null;
+    broadcastLobbyList();
     sendTo(ws, { type: 'RECONNECT_FAIL' }); return;
   }
   const { seat, name } = sess;
@@ -877,7 +883,6 @@ function handleReconnect(ws, msg) {
   sendTo(ws, { type: 'RECONNECTED', seat, name, solo: lobby.solo });
   if (lobby.game) broadcastGame(lobby);
   else broadcastLobby(lobby);
-  // notify others
   lobby.players.forEach((p, i) => {
     if (p && i !== seat) sendTo(p, { type: 'OPPONENT_RECONNECTED', seat, name });
   });
@@ -1140,10 +1145,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
     .guard-row { flex-wrap: wrap; gap: 4px; }
     .btn-sm { padding: 6px 10px; font-size: .76rem; }
 
-    /* Objectives strip: at bottom on mobile, collapsible */
-    .obj-strip { order: 3; border-bottom: none; border-top: 1px solid #ddd; }
-    .game-body { order: 1; }
-    .bottom-panel { order: 4; }
+    /* Objectives strip: at top on mobile (stays after topbar naturally) */
+    .obj-strip { border-bottom: 1px solid #ddd; border-top: none; }
     .obj-strip-toggle {
       display: flex !important;
       width: 100%;
@@ -1349,6 +1352,10 @@ let currentLobbyId='', inGame=false, isAiTable=false;
 let lastState=null, pendingGuard=null;
 let _cachedLobbies=[];
 
+// Restore name from sessionStorage if available
+myName = sessionStorage.getItem('pp_name') || '';
+if (myName) document.getElementById('inp-name').value = myName;
+
 // ── WebSocket ──────────────────────────────────────────────────────────────────
 function connect() {
   const proto = location.protocol==='https:' ? 'wss' : 'ws';
@@ -1405,10 +1412,15 @@ function handleMsg(msg) {
     case 'RECONNECT_FAIL':
       sessionStorage.removeItem('pp_token');
       myToken=''; inGame=false; currentLobbyId='';
-      // If already on score screen (game just ended), stay there
       if (!document.getElementById('screen-end').classList.contains('active')) {
-        myName='';
-        showScreen('screen-name');
+        if (myName) {
+          // Name known — go straight to lobby
+          send({type:'LOBBIES'});
+          showScreen('screen-lobby');
+          renderLobbyList(_cachedLobbies);
+        } else {
+          showScreen('screen-name');
+        }
       }
       break;
     case 'LOBBY_RESET':
@@ -1445,6 +1457,7 @@ document.getElementById('btn-go').onclick = () => {
   const n = document.getElementById('inp-name').value.trim();
   if (!n) { notif('Precisas de um nome!'); return; }
   myName = n.slice(0,20);
+  sessionStorage.setItem('pp_name', myName);
   showScreen('screen-lobby');
   renderLobbyList(_cachedLobbies);
   send({type:'LOBBIES'});
