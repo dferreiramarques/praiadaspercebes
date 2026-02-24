@@ -971,27 +971,33 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tg-score{background:#e8f4f8;border-radius:8px;padding:3px 8px;font-size:.72rem;color:var(--deep);font-weight:600;white-space:nowrap;}
 
   /* Bottom panel: 2 columns */
-  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:220px;}
-  .panel-turn{flex:1;padding:12px 16px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;}
-  .panel-objectives{flex:1;padding:12px 16px;overflow:hidden;}
-  .panel-label{font-weight:700;color:var(--dark);margin-bottom:5px;font-size:.85rem;}
-  .turn-cols{display:flex;gap:12px;align-items:flex-start;flex:1;}
-  .turn-col-tile{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;}
-  .turn-col-actions{flex:1;min-width:0;}
-  .drawn-tile{width:64px;height:64px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:3px solid var(--deep);flex-shrink:0;}
-  .fichas-count{font-size:.8rem;color:#555;margin-top:2px;}
-  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:5px;}
-  .guard-btns{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
+  .bottom-panel{display:flex;gap:0;background:#ffffffd0;border-top:1px solid #ddd;flex-shrink:0;height:200px;}
+  .panel-turn{flex:1;padding:10px 16px 10px;border-right:1px solid #eee;overflow:hidden;display:flex;flex-direction:column;gap:0;}
+  .panel-objectives{flex:1;padding:10px 16px;overflow:hidden;}
+  .panel-label{font-weight:700;color:var(--dark);font-size:.82rem;margin-bottom:6px;}
+  .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:6px;}
+  /* Tile row: tile left, everything else stacked right */
+  .tile-main-row{display:flex;gap:14px;align-items:flex-start;flex:1;}
+  .tile-col{display:flex;flex-direction:column;align-items:flex-start;gap:3px;flex-shrink:0;}
+  .drawn-tile{width:64px;height:64px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.8rem;border:3px solid var(--deep);flex-shrink:0;}
+  .drawn-tile-label{font-size:.72rem;color:#666;text-align:center;width:64px;}
+  /* Right col: guard buttons stacked vertically then fichas */
+  .tile-right-col{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:1;}
+  /* Guard buttons: horizontal strip */
+  .guard-row{display:flex;gap:6px;align-items:center;flex-wrap:nowrap;}
+  .guard-divider{color:#bbb;font-size:.9rem;user-select:none;}
   .btn{padding:14px 22px;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;}
   .btn:active{transform:scale(.96);}
   .btn-primary{background:linear-gradient(135deg,var(--sea),var(--deep));color:#fff;box-shadow:0 4px 14px rgba(0,80,160,.3);}
   .btn-secondary{background:var(--sand);color:var(--dark);border:2px solid var(--sand2);}
-  .btn-sm{padding:7px 13px;font-size:.82rem;}
-  .guard-label{font-size:.8rem;color:#555;margin-bottom:3px;}
-  .waiting-msg{font-size:.82rem;color:#888;font-style:italic;margin-top:6px;}
-  /* Tile+guard side-by-side layout */
-  .tile-guard-row{display:flex;align-items:center;gap:10px;flex:1;}
-  .guard-side{display:flex;flex-direction:column;justify-content:center;gap:5px;}
+  .btn-sm{padding:8px 14px;font-size:.83rem;border-radius:10px;}
+  .btn-skip{background:#f0f0f0;color:#555;border:1.5px solid #ccc;}
+  /* Fichas dots */
+  .fichas-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+  .ficha-dot{width:14px;height:14px;border-radius:3px;display:inline-block;flex-shrink:0;}
+  .fichas-label{font-size:.78rem;color:#555;font-weight:600;margin-right:2px;}
+  .waiting-msg{font-size:.82rem;color:#888;font-style:italic;}
+  .guard-btns{display:flex;gap:5px;flex-wrap:wrap;}
 
   /* Objectives */
   .obj-list{display:flex;flex-wrap:wrap;gap:6px;}
@@ -1133,33 +1139,37 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
     <!-- Bottom 2-column panel -->
     <div class="bottom-panel">
-      <!-- Left: turn actions (2 sub-cols: tile | actions) -->
+      <!-- Left: turn panel -->
       <div class="panel-turn">
+        <!-- Player badge -->
         <div id="my-color-badge-wrap"></div>
+        <!-- Label -->
         <div class="panel-label">🃏 Tile Retirado</div>
-        <div class="turn-cols">
-          <!-- Tile + guard buttons side by side -->
-          <div class="tile-guard-row">
-            <div class="turn-col-tile">
-              <div class="drawn-tile" id="drawn-tile-display">?</div>
-              <div id="drawn-tile-desc" style="font-size:.75rem;color:#555;text-align:center;max-width:64px;"></div>
-            </div>
-            <!-- Guard buttons right beside the tile -->
-            <div class="guard-side" id="guard-section" style="opacity:0;pointer-events:none;transition:opacity .15s;">
-              <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
-              <div class="guard-btns">
+        <!-- Tile + right column -->
+        <div class="tile-main-row">
+          <div class="tile-col">
+            <div class="drawn-tile" id="drawn-tile-display">?</div>
+            <div class="drawn-tile-label" id="drawn-tile-desc"></div>
+          </div>
+          <div class="tile-right-col">
+            <!-- Guard buttons in a horizontal strip -->
+            <div id="guard-section" style="opacity:0;pointer-events:none;transition:opacity .15s;">
+              <div class="guard-row">
                 <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+                <span class="guard-divider" id="guard-div-h">|</span>
                 <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-                <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
+                <span class="guard-divider">|</span>
+                <button class="btn btn-sm btn-skip" id="btn-guard-skip">✗ Não colocar</button>
               </div>
             </div>
             <div id="waiting-turn" class="waiting-msg" style="opacity:0;pointer-events:none;transition:opacity .15s;">
               ⏳ Vez de outro jogador...
             </div>
-          </div>
-          <!-- fichas count -->
-          <div class="turn-col-actions">
-            <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
+            <!-- Fichas as colored squares -->
+            <div class="fichas-row">
+              <span class="fichas-label">🛟 Fichas:</span>
+              <div id="fichas-dots"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1400,7 +1410,29 @@ function renderGame(state) {
   }
 
   // Drawn tile
-  document.getElementById('my-fichas').textContent = state.myFichas;
+  document.getElementById('my-fichas') && (document.getElementById('my-fichas').textContent = state.myFichas);
+  // Fichas as colored squares
+  const fichasDots = document.getElementById('fichas-dots');
+  if (fichasDots) {
+    fichasDots.innerHTML = '';
+    fichasDots.style.display = 'flex';
+    fichasDots.style.gap = '4px';
+    fichasDots.style.flexWrap = 'wrap';
+    const playerColor = PLAYER_COLORS[state.mySeat];
+    const total = state.myFichas || 0;
+    for (let i = 0; i < total; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'ficha-dot';
+      dot.style.background = playerColor;
+      fichasDots.appendChild(dot);
+    }
+    if (total === 0) {
+      const none = document.createElement('span');
+      none.style.cssText = 'font-size:.75rem;color:#aaa;font-style:italic;';
+      none.textContent = 'sem fichas';
+      fichasDots.appendChild(none);
+    }
+  }
   const dtd = document.getElementById('drawn-tile-display');
   const dtDesc = document.getElementById('drawn-tile-desc');
   if (isMyTurn && state.drawnTile && !state.drawnTile.hidden) {
@@ -1445,13 +1477,11 @@ function renderGame(state) {
       // Hide buttons that are not available instead of greying out
       const btnH = document.getElementById('btn-guard-h');
       const btnV = document.getElementById('btn-guard-v');
+      const divH = document.getElementById('guard-div-h');
       btnH.style.display = canH ? '' : 'none';
+      if (divH) divH.style.display = canH ? '' : 'none';
       btnV.style.display = canV ? '' : 'none';
       document.getElementById('btn-guard-skip').disabled = false;
-      const guardLabel = document.getElementById('guard-label-text');
-      guardLabel.textContent = (!canH) ? '↕ Só vertical disponível'
-        : (!canV) ? '↔ Só horizontal disponível'
-        : 'Colocar salva-vidas?';
     }
   } else {
     guardSec.style.opacity = '0';
