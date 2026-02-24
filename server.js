@@ -1154,10 +1154,21 @@ const CLIENT_HTML = `<!DOCTYPE html>
     .tile .guard-marker { font-size: 1.1rem !important; }
     .valid-cell { width: 60px !important; height: 60px !important; font-size: 1.3rem !important; }
 
-    /* Bottom panel: only player turn area, no objectives */
-    .bottom-panel { flex-direction: row; height: auto; max-height: none; overflow: visible; }
+    /* Bottom panel: anchored to bottom of screen */
+    .bottom-panel {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: auto;
+      max-height: none;
+      overflow: visible;
+      flex-direction: row;
+      z-index: 10;
+      box-shadow: 0 -2px 10px rgba(0,0,0,.12);
+    }
     .panel-turn { border-right: none; padding: 5px 10px; flex: 1; flex-shrink: 0; }
     .panel-objectives { display: none; }
+    /* Give the game-body padding so content isn't hidden behind fixed panel */
+    .game-body { padding-bottom: 120px; }
 
     /* Badge row compact */
     .my-color-badge { font-size: .7rem; padding: 2px 6px; }
