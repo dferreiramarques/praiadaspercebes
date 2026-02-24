@@ -2005,8 +2005,8 @@ document.getElementById('modal-rules').onclick = (e) => {
 // ── Tile Helpers ───────────────────────────────────────────────────────────────
 function tileImgName(tile) {
   if (!tile.variantIdx) return null;
-  if (tile.type === 'normal') return `tile-normal-${tile.bathers}-${tile.variantIdx}.png`;
-  return `tile-${tile.type}-${tile.variantIdx}.png`;
+  if (tile.type === 'normal') return 'tile-normal-' + tile.bathers + '-' + tile.variantIdx + '.png';
+  return 'tile-' + tile.type + '-' + tile.variantIdx + '.png';
 }
 function tileEmojiStr(tile) {
   if (tile.type==='rock') return '🪨';
@@ -2019,8 +2019,8 @@ function tileEmojiStr(tile) {
 function tileEmoji(tile) {
   const img = tileImgName(tile);
   if (img) {
-    // Return img tag; onerror falls back to emoji span
-    return `<img src="/public/${img}" class="tile-img" alt="${tileEmojiStr(tile)}" onerror="this.outerHTML='<span>${tileEmojiStr(tile)}</span>'">`;
+    const emo = tileEmojiStr(tile);
+    return '<img src="/public/' + img + '" class="tile-img" alt="' + emo + '" onerror="this.outerHTML=\'<span>' + emo + '</span>\'">';
   }
   return tileEmojiStr(tile);
 }
