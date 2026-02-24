@@ -59,6 +59,7 @@ function buildDeck() {
   for (let i = 0; i < 15; i++) tiles.push({ id: id++, bathers: 2, type: 'normal' });
   for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 3, type: 'normal' });
   for (let i = 0; i < 5;  i++) tiles.push({ id: id++, bathers: 1, type: 'surf' });
+  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 0, type: 'sand' });
   tiles.push({ id: id++, bathers: 0, type: 'rock' });
   // shuffle
   for (let i = tiles.length - 1; i > 0; i--) {
@@ -119,6 +120,11 @@ function canPlace(board, r, c) {
   const rowCount = occupied.filter(p => p.r === r).length;
   const colCount = occupied.filter(p => p.c === c).length;
   if (rowCount >= MAX_LINE || colCount >= MAX_LINE) return false;
+  // check grid span: overall board must fit within 7×7
+  const allR = occupied.map(p => p.r);
+  const allC = occupied.map(p => p.c);
+  if (Math.max(...allR, r) - Math.min(...allR, r) >= MAX_LINE) return false;
+  if (Math.max(...allC, c) - Math.min(...allC, c) >= MAX_LINE) return false;
   return true;
 }
 
@@ -949,10 +955,11 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile.normal{background:linear-gradient(135deg,var(--sand),var(--sand2));}
   .tile.surf{background:linear-gradient(135deg,#ff9f1c,#ffbf69);}
   .tile.rock{background:linear-gradient(135deg,#8d8d8d,#555);color:#fff;}
+  .tile.sand{background:linear-gradient(135deg,#f5deb3,#e8c97a);}
   .tile.start-tile{border:2px solid var(--deep);}
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
   .tile.rock .bathers{color:#ddd;}
-  .tile .guard-marker{position:absolute;top:3px;right:3px;font-size:.75rem;line-height:1;}
+  .tile .guard-marker{position:absolute;top:3px;right:3px;font-size:1.5rem;line-height:1;}
   .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
 
@@ -969,9 +976,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .panel-objectives{flex:1;padding:12px 16px;overflow:hidden;}
   .panel-label{font-weight:700;color:var(--dark);margin-bottom:5px;font-size:.85rem;}
   .turn-cols{display:flex;gap:12px;align-items:flex-start;flex:1;}
-  .turn-col-tile{flex-shrink:0;}
+  .turn-col-tile{flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:4px;}
   .turn-col-actions{flex:1;min-width:0;}
-  .drawn-tile{width:52px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.3rem;border:3px solid var(--deep);flex-shrink:0;}
+  .drawn-tile{width:64px;height:64px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:3px solid var(--deep);flex-shrink:0;}
   .fichas-count{font-size:.8rem;color:#555;margin-top:2px;}
   .my-color-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:20px;margin-bottom:5px;}
   .guard-btns{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px;}
@@ -982,6 +989,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .btn-sm{padding:7px 13px;font-size:.82rem;}
   .guard-label{font-size:.8rem;color:#555;margin-bottom:3px;}
   .waiting-msg{font-size:.82rem;color:#888;font-style:italic;margin-top:6px;}
+  /* Tile+guard side-by-side layout */
+  .tile-guard-row{display:flex;align-items:center;gap:10px;flex:1;}
+  .guard-side{display:flex;flex-direction:column;justify-content:center;gap:5px;}
 
   /* Objectives */
   .obj-list{display:flex;flex-wrap:wrap;gap:6px;}
@@ -1128,28 +1138,28 @@ const CLIENT_HTML = `<!DOCTYPE html>
         <div id="my-color-badge-wrap"></div>
         <div class="panel-label">🃏 Tile Retirado</div>
         <div class="turn-cols">
-          <!-- Sub-left: the tile itself -->
-          <div class="turn-col-tile">
-            <div class="drawn-tile" id="drawn-tile-display">?</div>
-          </div>
-          <!-- Sub-right: desc + fichas + guard buttons -->
-          <div class="turn-col-actions">
-            <div id="drawn-tile-desc" style="font-size:.8rem;color:#555;margin-bottom:2px;"></div>
-            <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
-            <!-- guard + waiting always occupy same fixed space -->
-            <div style="margin-top:6px;min-height:60px;position:relative;">
-              <div id="guard-section" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
-                <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
-                <div class="guard-btns">
-                  <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
-                  <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
-                  <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
-                </div>
-              </div>
-              <div id="waiting-turn" class="waiting-msg" style="position:absolute;top:0;left:0;right:0;opacity:0;pointer-events:none;transition:opacity .15s;">
-                ⏳ Vez de outro jogador...
+          <!-- Tile + guard buttons side by side -->
+          <div class="tile-guard-row">
+            <div class="turn-col-tile">
+              <div class="drawn-tile" id="drawn-tile-display">?</div>
+              <div id="drawn-tile-desc" style="font-size:.75rem;color:#555;text-align:center;max-width:64px;"></div>
+            </div>
+            <!-- Guard buttons right beside the tile -->
+            <div class="guard-side" id="guard-section" style="opacity:0;pointer-events:none;transition:opacity .15s;">
+              <div class="guard-label" id="guard-label-text">Colocar salva-vidas?</div>
+              <div class="guard-btns">
+                <button class="btn btn-primary btn-sm" id="btn-guard-h">↔ Horizontal</button>
+                <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
+                <button class="btn btn-secondary btn-sm" id="btn-guard-skip">✗ Não</button>
               </div>
             </div>
+            <div id="waiting-turn" class="waiting-msg" style="opacity:0;pointer-events:none;transition:opacity .15s;">
+              ⏳ Vez de outro jogador...
+            </div>
+          </div>
+          <!-- fichas count -->
+          <div class="turn-col-actions">
+            <div class="fichas-count">🛟 Fichas: <b id="my-fichas">8</b></div>
           </div>
         </div>
       </div>
@@ -1432,8 +1442,11 @@ function renderGame(state) {
       guardSec.style.pointerEvents = 'auto';
       waitingTurn.style.opacity = '0';
       waitingTurn.style.pointerEvents = 'none';
-      document.getElementById('btn-guard-h').disabled = !canH;
-      document.getElementById('btn-guard-v').disabled = !canV;
+      // Hide buttons that are not available instead of greying out
+      const btnH = document.getElementById('btn-guard-h');
+      const btnV = document.getElementById('btn-guard-v');
+      btnH.style.display = canH ? '' : 'none';
+      btnV.style.display = canV ? '' : 'none';
       document.getElementById('btn-guard-skip').disabled = false;
       const guardLabel = document.getElementById('guard-label-text');
       guardLabel.textContent = (!canH) ? '↕ Só vertical disponível'
@@ -1618,6 +1631,7 @@ document.getElementById('modal-rules').onclick = (e) => {
 function tileEmoji(tile) {
   if (tile.type==='rock') return '🪨';
   if (tile.type==='surf') return '🏄';
+  if (tile.type==='sand') return '🏖️';
   if (tile.bathers===1) return '🧍';
   if (tile.bathers===2) return '👫';
   return '👨‍👩‍👦';
@@ -1625,6 +1639,7 @@ function tileEmoji(tile) {
 function tileLabel(tile) {
   if (tile.type==='rock') return 'Rocha';
   if (tile.type==='surf') return 'Prancha ×2';
+  if (tile.type==='sand') return 'Areia';
   return tile.bathers + (tile.bathers===1?' banhista':' banhistas');
 }
 
