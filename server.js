@@ -2020,7 +2020,7 @@ function tileEmoji(tile) {
   const img = tileImgName(tile);
   if (img) {
     const emo = tileEmojiStr(tile);
-    return '<img src="/public/' + img + '" class="tile-img" alt="' + emo + '" onerror="this.outerHTML=\'<span>' + emo + '</span>\'">';
+    return '<img src="/public/' + img + '" class="tile-img" alt="' + emo + '">';
   }
   return tileEmojiStr(tile);
 }
