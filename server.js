@@ -1104,6 +1104,15 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile.rock{background:linear-gradient(135deg,#8d8d8d,#555);color:#fff;}
   .tile.sand{background:linear-gradient(135deg,#f5deb3,#e8c97a);}
   .tile.start-tile{border:2px solid var(--deep);}
+  @keyframes tile-pulse {
+    0%   { box-shadow: 0 0 0 0px rgba(255,255,255,.9), 0 0 0 0px rgba(2,62,138,.5); transform: scale(1); }
+    40%  { box-shadow: 0 0 0 6px rgba(255,255,255,.4), 0 0 0 12px rgba(2,62,138,.15); transform: scale(1.08); }
+    100% { box-shadow: 0 0 0 0px rgba(255,255,255,0), 0 0 0 0px rgba(2,62,138,0); transform: scale(1); }
+  }
+  .tile.last-placed {
+    animation: tile-pulse 0.7s ease-out 3;
+    z-index: 5;
+  }
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
   .tile.rock .bathers{color:#ddd;}
   .tile-img{width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;}
@@ -1822,7 +1831,9 @@ function renderBoard(state) {
     const x = (tile.c - vMinC) * STEP;
     const y = (tile.r - vMinR) * STEP;
     const div = document.createElement('div');
-    div.className = 'tile ' + tile.type + (tile.id===0?' start-tile':'');
+    const isLastPlaced = state.lastAction && state.lastAction.type === 'PLACE'
+      && tile.r === state.lastAction.r && tile.c === state.lastAction.c;
+    div.className = 'tile ' + tile.type + (tile.id===0?' start-tile':'') + (isLastPlaced?' last-placed':'');
     div.style.left = x+'px';
     div.style.top = y+'px';
     div.style.width = TILE_SIZE+'px';
