@@ -1307,6 +1307,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Deck counter + rules, just below objectives -->
+  <div class="board-footer">
+    <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">Baralho: <span id="deck-count">—</span></div>
+    <button class="btn-rules" id="btn-show-rules">Regras</button>
+  </div>
+
   <div class="game-body">
     <!-- Board: centered, grows from middle -->
     <div class="board-zone">
@@ -1315,13 +1321,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- Board footer: deck counter + rules, centered -->
-    <div class="board-footer">
-      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">Baralho: <span id="deck-count">—</span></div>
-      <button class="btn-rules" id="btn-show-rules">Regras</button>
-    </div>
-
-    <!-- Turn sequence strip -->
+    <!-- Turn sequence strip (desktop only) -->
     <div class="turn-guide">
       <div class="tg-step"><div class="tg-num">1</div> Pescar tile</div>
       <div class="tg-arrow">›</div>
@@ -1353,7 +1353,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
                 <span class="guard-divider" id="guard-div-h">|</span>
                 <button class="btn btn-primary btn-sm" id="btn-guard-v">↕ Vertical</button>
                 <span class="guard-divider">|</span>
-                <button class="btn btn-sm btn-skip" id="btn-guard-skip">✗ Não colocar</button>
+                <button class="btn btn-sm btn-skip" id="btn-guard-skip">✗</button>
               </div>
             </div>
             <div id="waiting-turn" class="waiting-msg" style="opacity:0;pointer-events:none;transition:opacity .15s;">
