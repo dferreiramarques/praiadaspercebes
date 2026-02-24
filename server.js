@@ -299,8 +299,10 @@ function hasExcursion(board, cells) {
 }
 
 // ─── Game Logic ────────────────────────────────────────────────────────────────
-function newGame(names, isSolo) {
-  const deck = buildDeck(names.length);
+function newGame(names, isSolo, nPlayers) {
+  // nPlayers is passed explicitly to avoid any ambiguity with AI tables
+  const n = nPlayers || names.length;
+  const deck = buildDeck(n);
   const totalDeck = deck.length;
   const allObjs = buildObjectives();
   const revealed = allObjs.slice(0, 4);
@@ -308,7 +310,7 @@ function newGame(names, isSolo) {
 
   // Fichas scaled by player count to avoid guard congestion
   const fichasByN = { 2: 6, 3: 5, 4: 4 };
-  const fichas = fichasByN[names.length] || 6;
+  const fichas = fichasByN[n] || 6;
 
   const board = {};
   boardSet(board, 0, 0, { id: 0, bathers: 1, type: 'normal' }); // starting tile
@@ -480,7 +482,10 @@ function startGame(lobby) {
   } else {
     lobby.aiSeats = allNames.map(() => false);
   }
-  lobby.game = newGame(allNames, lobby.solo);
+  lobby.game = newGame(allNames, lobby.solo, lobby.maxPlayers);
+  if (allNames.length !== lobby.maxPlayers) {
+    console.warn('[startGame] allNames.length mismatch: got', allNames.length, 'expected', lobby.maxPlayers);
+  }
   lobby.game.drawnTile = drawTile(lobby.game);
   broadcastGame(lobby);
   // if AI goes first, schedule its move
