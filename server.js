@@ -51,22 +51,26 @@ for (const cfg of AI_TABLE_CONFIGS) {
 }
 
 // ─── Tile / Deck Definitions ──────────────────────────────────────────────────
-// tile: { id, bathers, type } type: 'normal'|'surf'|'rock'
-function buildDeck() {
+// tile: { id, bathers, type } type: 'normal'|'surf'|'rock'|'sand'
+// Base deck: 44 tiles total
+// 4 surf, 2 rock, 6×3-bathers, 12×2-bathers, 8×1-bather, 12 sand
+function buildDeck(nPlayers) {
   const tiles = [];
   let id = 1;
-  for (let i = 0; i < 20; i++) tiles.push({ id: id++, bathers: 1, type: 'normal' });
-  for (let i = 0; i < 15; i++) tiles.push({ id: id++, bathers: 2, type: 'normal' });
-  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 3, type: 'normal' });
-  for (let i = 0; i < 5;  i++) tiles.push({ id: id++, bathers: 1, type: 'surf' });
-  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 0, type: 'sand' });
-  tiles.push({ id: id++, bathers: 0, type: 'rock' });
+  for (let i = 0; i < 8;  i++) tiles.push({ id: id++, bathers: 1, type: 'normal' });
+  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 2, type: 'normal' });
+  for (let i = 0; i < 6;  i++) tiles.push({ id: id++, bathers: 3, type: 'normal' });
+  for (let i = 0; i < 4;  i++) tiles.push({ id: id++, bathers: 1, type: 'surf' });
+  for (let i = 0; i < 2;  i++) tiles.push({ id: id++, bathers: 0, type: 'rock' });
+  for (let i = 0; i < 12; i++) tiles.push({ id: id++, bathers: 0, type: 'sand' });
   // shuffle
   for (let i = tiles.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   }
-  return tiles;
+  // Trim for player count: 2→44 (all), 3→42 (remove 2), 4→44 (all)
+  const target = nPlayers === 3 ? 42 : 44;
+  return tiles.slice(0, target);
 }
 
 // 8 objective cards
@@ -296,7 +300,8 @@ function hasExcursion(board, cells) {
 
 // ─── Game Logic ────────────────────────────────────────────────────────────────
 function newGame(names, isSolo) {
-  const deck = buildDeck();
+  const deck = buildDeck(names.length);
+  const totalDeck = deck.length;
   const allObjs = buildObjectives();
   const revealed = allObjs.slice(0, 4);
   const remaining = allObjs.slice(4);
@@ -308,6 +313,7 @@ function newGame(names, isSolo) {
     players: names.map(name => ({ name, pts: 0, guards: [], fichas: 8, objPts: 0 })),
     n: names.length,
     deck,
+    totalDeck,
     board,
     guards: [],      // [{r,c,dir,playerIdx,id}]
     guardIdSeq: 1,
@@ -403,6 +409,7 @@ function buildView(g, seat) {
     currentPlayer: g.currentPlayer,
     drawnTile: g.currentPlayer === seat && g.drawnTile ? g.drawnTile : (g.drawnTile ? { hidden: true } : null),
     deckSize: g.deck.length,
+    totalDeck: g.totalDeck || 44,
     revealedObjs: g.revealedObjs,
     claimedObjs: g.claimedObjs,
     validPlacements,
@@ -766,8 +773,13 @@ function nextTurn(lobby) {
   }
   g.currentPlayer = (g.currentPlayer + 1) % g.n;
   g.phase = 'PLACE_TILE';
-  g.drawnTile = drawTile(g);
   g.pendingPlacement = null;
+  // End game if deck can no longer serve all players
+  if (g.deck.length < g.n) {
+    endGame(lobby);
+    return;
+  }
+  g.drawnTile = drawTile(g);
   if (!g.drawnTile) {
     endGame(lobby);
     return;
@@ -942,6 +954,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tp-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
   .btn-rules{background:#ffffff22;border:1px solid #ffffff44;color:#fff;padding:5px 12px;border-radius:20px;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap;}
   .btn-rules:hover{background:#ffffff33;}
+  .btn-leave-game{background:#e6394622;border:1px solid #e6394666;}
+  .btn-leave-game:hover{background:#e6394644;}
+  .deck-counter{background:#ffffff22;border:1px solid #ffffff33;color:#caf0f8;padding:5px 10px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap;}
 
   /* ── Main layout: board centered, bottom panel ── */
   .game-body{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
@@ -1114,7 +1129,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
     <div class="topbar-title">🏖 Praia das Percebes</div>
     <div class="topbar-right">
       <div class="game-status" id="game-status">A aguardar...</div>
+      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">🃏 <span id="deck-count">—</span></div>
       <button class="btn-rules" id="btn-show-rules">📋 Regras</button>
+      <button class="btn-rules btn-leave-game" id="btn-leave-game">🚪 Sair</button>
     </div>
   </div>
   <div class="game-body">
@@ -1395,6 +1412,17 @@ function renderGame(state) {
   badgeRow.appendChild(fichasDots);
   badgeWrap.appendChild(badgeRow);
 
+  // Deck counter
+  const deckCountEl = document.getElementById('deck-count');
+  if (deckCountEl) {
+    const remaining = state.deckSize || 0;
+    const total = state.totalDeck || 44;
+    const isLow = remaining <= state.n;
+    deckCountEl.textContent = remaining + '/' + total;
+    const counterEl = document.getElementById('deck-counter');
+    if (counterEl) counterEl.style.background = isLow ? '#e6394644' : '#ffffff22';
+  }
+
   // Top bar players
   const tpEl = document.getElementById('tp-players');
   tpEl.innerHTML = '';
@@ -1640,6 +1668,15 @@ document.getElementById('btn-restart').onclick = () => {
 document.getElementById('btn-guard-h').onclick = () => send({type:'PLACE_GUARD', dir:'h'});
 document.getElementById('btn-guard-v').onclick = () => send({type:'PLACE_GUARD', dir:'v'});
 document.getElementById('btn-guard-skip').onclick = () => send({type:'SKIP_GUARD'});
+
+document.getElementById('btn-leave-game').onclick = () => {
+  if (!confirm('Sair do jogo? Vais perder a tua posição.')) return;
+  send({type:'LEAVE_LOBBY'});
+  sessionStorage.removeItem('pp_token');
+  myToken=''; inGame=false; currentLobbyId='';
+  send({type:'LOBBIES'});
+  showScreen('screen-lobby');
+};
 
 // ── Rules Modal ────────────────────────────────────────────────────────────────
 document.getElementById('btn-show-rules').onclick = () => {
