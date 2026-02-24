@@ -395,7 +395,7 @@ function buildView(g, seat) {
 
   return {
     mySeat: seat,
-    players: g.players.map(p => ({ name: p.name, pts: 0, fichas: p.fichas, objPts: p.objPts })),
+    players: g.players.map(p => ({ name: p.name, pts: p.pts, fichas: p.fichas, objPts: p.objPts })),
     n: g.n,
     board: boardArr,
     guards: g.guards,
