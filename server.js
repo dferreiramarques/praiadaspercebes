@@ -584,7 +584,6 @@ function botGuard(lobby, r, c, seat) {
 
     g.players[seat].fichas--;
     g.guards.push({ r, c, dir, playerIdx: seat, id: g.guardIdSeq++ });
-    if (g.players[seat].fichas === 0) { handleFichasEmpty(lobby, seat); return; }
   }
   nextTurn(lobby);
 }
@@ -737,13 +736,6 @@ function handleAction(ws, msg) {
       const guardId = g.guardIdSeq++;
       g.guards.push({ r, c, dir, playerIdx: seat, id: guardId });
       g.lastAction = { type: 'GUARD', r, c, dir, playerIdx: seat };
-
-      // check if this player ran out of fichas
-      if (g.players[seat].fichas === 0) {
-        handleFichasEmpty(lobby, seat);
-        return;
-      }
-
       nextTurn(lobby);
       break;
     }
@@ -763,16 +755,9 @@ function handleAction(ws, msg) {
 }
 
 function handleFichasEmpty(lobby, seat) {
-  const g = lobby.game;
-  // player ran out of fichas — others get 1 extra turn
-  const others = [];
-  for (let i = 1; i < g.n; i++) {
-    others.push((seat + i) % g.n);
-  }
-  g.extraTurns = { remaining: others, initiator: seat };
-  g.phase = 'EXTRA_TURNS';
-  // start first extra turn
-  doNextExtraTurn(lobby);
+  // Fichas vazias não terminam o jogo — o jogador simplesmente não pode colocar mais guards
+  // O jogo continua até o baralho esgotar
+  nextTurn(lobby);
 }
 
 function doNextExtraTurn(lobby) {
@@ -1135,37 +1120,23 @@ const CLIENT_HTML = `<!DOCTYPE html>
     /* Bottom panel: stack vertically */
     .bottom-panel { flex-direction: column; height: auto; max-height: 46vh; overflow: hidden; }
     .panel-turn { border-right: none; border-bottom: 1px solid #eee; padding: 8px 12px; flex-shrink: 0; }
-    .panel-objectives { padding: 8px 12px; overflow-y: auto; flex: 1; }
-    .panel-objectives.mob-hidden { display: none; }
-
-    /* Badge row compact */
-    .my-color-badge { font-size: .72rem; padding: 2px 7px; }
-    .ficha-dot { width: 11px; height: 11px; }
-    #game-status { font-size: .7rem; }
-
-    /* Tile + guard buttons */
-    .tile-main-row { gap: 10px; }
-    .drawn-tile { width: 52px !important; height: 52px !important; font-size: 1.4rem !important; }
-    .drawn-tile-label { font-size: .6rem !important; width: 52px !important; }
-    .guard-row { flex-wrap: wrap; gap: 4px; }
-    .btn-sm { padding: 6px 10px; font-size: .76rem; }
-
-    /* Obj toggle button */
+    .panel-objectives { padding: 0; flex-shrink: 0; border-top: 1px solid #eee; }
     .mob-obj-toggle {
       display: flex !important;
+      width: 100%;
       align-items: center;
-      gap: 5px;
-      font-size: .72rem;
+      justify-content: space-between;
+      font-size: .78rem;
       font-weight: 700;
       color: var(--deep);
-      background: var(--sand);
-      border: 1px solid var(--sand2);
-      border-radius: 8px;
-      padding: 3px 9px;
+      background: #f0f8ff;
+      border: none;
+      border-bottom: 1px solid #e0e0e0;
+      padding: 8px 12px;
       cursor: pointer;
-      margin-top: 4px;
-      align-self: flex-start;
     }
+    .obj-inner { padding: 8px 12px; overflow-y: auto; max-height: 30vh; }
+    .obj-inner.mob-hidden { display: none; }
     .obj-card { font-size: .68rem; padding: 4px 7px; }
     .obj-pts { font-size: .75rem; }
 
@@ -1241,7 +1212,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
     </ul>
 
     <h3>Fim de Jogo</h3>
-    <p>O jogo termina quando o baralho fica com menos tiles do que jogadores, <b>ou</b> quando um jogador fica sem fichas (os restantes jogam mais 1 turno cada).</p>
+    <p>O jogo termina quando o baralho fica com menos tiles do que jogadores. Quando um jogador fica sem fichas, simplesmente já não pode colocar mais salva-vidas — mas continua a jogar tiles até o fim.</p>
 
     <h3>Objetivos Disponíveis</h3>
     <ul>
@@ -1317,14 +1288,16 @@ const CLIENT_HTML = `<!DOCTYPE html>
             </div>
           </div>
         </div>
-        <!-- Mobile: toggle objectives -->
-        <button class="mob-obj-toggle" id="btn-mob-objs" style="display:none">Objetivos ▾</button>
+        <!-- Mobile: toggle objectives is the header of the objectives panel below -->
       </div>
 
-      <!-- Right: objectives -->
-      <div class="panel-objectives mob-hidden" id="panel-objectives">
-        <div class="panel-label">Objetivos</div>
-        <div class="obj-list" id="obj-list"></div>
+      <!-- Right: objectives (mobile: collapsible) -->
+      <div class="panel-objectives" id="panel-objectives">
+        <button class="mob-obj-toggle" id="btn-mob-objs" style="display:none">Objetivos ▾</button>
+        <div class="obj-inner mob-hidden" id="obj-inner">
+          <div class="panel-label">Objetivos</div>
+          <div class="obj-list" id="obj-list"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1843,20 +1816,15 @@ document.getElementById('btn-guard-skip').onclick = () => send({type:'SKIP_GUARD
 // ── Mobile: objectives toggle ──────────────────────────────────────────────────
 const mobObjsBtn = document.getElementById('btn-mob-objs');
 const panelObjs = document.getElementById('panel-objectives');
+const objInner = document.getElementById('obj-inner');
 let mobObjsOpen = false;
 
 function applyMobileLayout() {
   const isMobile = window.innerWidth <= 600;
   mobObjsBtn.style.display = isMobile ? 'flex' : 'none';
-  if (isMobile) {
-    if (mobObjsOpen) {
-      panelObjs.classList.remove('mob-hidden');
-    } else {
-      panelObjs.classList.add('mob-hidden');
-    }
-  } else {
-    // Desktop: always show objectives, remove toggle class
-    panelObjs.classList.remove('mob-hidden');
+  if (!isMobile) {
+    // Desktop: always show everything
+    objInner.classList.remove('mob-hidden');
   }
 }
 
@@ -1864,9 +1832,9 @@ mobObjsBtn.onclick = () => {
   mobObjsOpen = !mobObjsOpen;
   mobObjsBtn.textContent = mobObjsOpen ? 'Objetivos ▴' : 'Objetivos ▾';
   if (mobObjsOpen) {
-    panelObjs.classList.remove('mob-hidden');
+    objInner.classList.remove('mob-hidden');
   } else {
-    panelObjs.classList.add('mob-hidden');
+    objInner.classList.add('mob-hidden');
   }
 };
 
