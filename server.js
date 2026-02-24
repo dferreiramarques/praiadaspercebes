@@ -930,15 +930,56 @@ function serveStatic(req, res) {
 }
 
 const MANIFEST = `{
-  "name": "Na Praia das Percebes",
+  "name": "Praia das Percebes",
   "short_name": "Percebes",
+  "description": "Jogo de colocação de tiles para 2–4 jogadores",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0077b6",
-  "theme_color": "#00b4d8",
-  "icons": []
+  "theme_color": "#023e8a",
+  "icons": [
+    { "src": "/public/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/public/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
 }`;
-const SW = `self.addEventListener('fetch', e => {});`;
+const SW = `
+const CACHE = 'percebes-v1';
+const SHELL = ['/', '/manifest.webmanifest'];
+
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys =>
+    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+
+self.addEventListener('fetch', e => {
+  const url = new URL(e.request.url);
+  // Always go to network for WebSocket upgrades and game API
+  if (e.request.headers.get('upgrade') === 'websocket') return;
+  // Cache-first for static assets (icons, tile images)
+  if (url.pathname.startsWith('/public/')) {
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }))
+    );
+    return;
+  }
+  // Network-first for everything else (game stays live)
+  e.respondWith(
+    fetch(e.request).catch(() => caches.match(e.request))
+  );
+});
+`;
 
 // ─── CLIENT HTML ──────────────────────────────────────────────────────────────
 const CLIENT_HTML = `<!DOCTYPE html>
@@ -946,10 +987,24 @@ const CLIENT_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<meta name="theme-color" content="#00b4d8"/>
+<meta name="theme-color" content="#023e8a"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Percebes"/>
 <link rel="manifest" href="/manifest.webmanifest"/>
-<title>🏖 Na Praia das Percebes</title>
+<link rel="icon" href="/public/icon-192.png" type="image/png"/>
+<link rel="apple-touch-icon" href="/public/icon-512.png"/>
+<!-- Apple splash screens -->
+<link rel="apple-touch-startup-image" href="/public/splash-1170x2532.png" media="(device-width:390px) and (device-height:844px) and (-webkit-device-pixel-ratio:3)"/>
+<link rel="apple-touch-startup-image" href="/public/splash-1284x2778.png" media="(device-width:428px) and (device-height:926px) and (-webkit-device-pixel-ratio:3)"/>
+<link rel="apple-touch-startup-image" href="/public/splash-1125x2436.png" media="(device-width:375px) and (device-height:812px) and (-webkit-device-pixel-ratio:3)"/>
+<link rel="apple-touch-startup-image" href="/public/splash-750x1334.png"  media="(device-width:375px) and (device-height:667px) and (-webkit-device-pixel-ratio:2)"/>
+<title>Praia das Percebes</title>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+  }
+</script>
 <style>
   :root{
     --sand:#f5deb3;--sand2:#e8c97a;--sea:#0096c7;--sea2:#00b4d8;--deep:#023e8a;
