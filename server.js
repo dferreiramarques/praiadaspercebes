@@ -980,7 +980,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .tile-main-row{display:flex;gap:14px;align-items:flex-start;flex:1;}
   .tile-col{display:flex;flex-direction:column;align-items:flex-start;gap:3px;flex-shrink:0;}
   .drawn-tile{width:64px;height:64px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.8rem;border:3px solid var(--deep);flex-shrink:0;}
-  .drawn-tile-label{font-size:.72rem;color:#666;text-align:center;width:64px;}
+  .drawn-tile-label{font-size:.62rem;color:#888;text-align:center;width:64px;margin-top:2px;}
   /* Right col: guard buttons stacked vertically then fichas */
   .tile-right-col{display:flex;flex-direction:column;justify-content:center;gap:8px;flex:1;}
   /* Guard buttons: horizontal strip */
@@ -1164,11 +1164,6 @@ const CLIENT_HTML = `<!DOCTYPE html>
             </div>
             <div id="waiting-turn" class="waiting-msg" style="opacity:0;pointer-events:none;transition:opacity .15s;">
               ⏳ Vez de outro jogador...
-            </div>
-            <!-- Fichas as colored squares -->
-            <div class="fichas-row">
-              <span class="fichas-label">🛟 Fichas:</span>
-              <div id="fichas-dots"></div>
             </div>
           </div>
         </div>
@@ -1363,9 +1358,12 @@ function renderGame(state) {
   const isMyTurn = state.currentPlayer === state.mySeat;
   const phase = state.phase;
 
-  // My color badge in panel
+  // My color badge in panel (with fichas dots inline)
   const badgeWrap = document.getElementById('my-color-badge-wrap');
   badgeWrap.innerHTML = '';
+  const badgeRow = document.createElement('div');
+  badgeRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;';
+  // Name badge
   const badge = document.createElement('div');
   badge.className = 'my-color-badge';
   badge.style.background = PLAYER_COLORS_BG[state.mySeat];
@@ -1375,7 +1373,27 @@ function renderGame(state) {
   sw.style.cssText = 'width:14px;height:14px;border-radius:3px;background:'+PLAYER_COLORS[state.mySeat];
   badge.appendChild(sw);
   badge.appendChild(document.createTextNode(state.players[state.mySeat]?.name));
-  badgeWrap.appendChild(badge);
+  badgeRow.appendChild(badge);
+  // Fichas dots right after the badge
+  const fichasDots = document.createElement('div');
+  fichasDots.id = 'fichas-dots';
+  fichasDots.style.cssText = 'display:flex;gap:3px;align-items:center;flex-wrap:wrap;';
+  const playerColor = PLAYER_COLORS[state.mySeat];
+  const totalFichas = state.myFichas || 0;
+  for (let i = 0; i < totalFichas; i++) {
+    const dot = document.createElement('span');
+    dot.className = 'ficha-dot';
+    dot.style.background = playerColor;
+    fichasDots.appendChild(dot);
+  }
+  if (totalFichas === 0) {
+    const none = document.createElement('span');
+    none.style.cssText = 'font-size:.72rem;color:#aaa;font-style:italic;';
+    none.textContent = 'sem fichas';
+    fichasDots.appendChild(none);
+  }
+  badgeRow.appendChild(fichasDots);
+  badgeWrap.appendChild(badgeRow);
 
   // Top bar players
   const tpEl = document.getElementById('tp-players');
@@ -1411,28 +1429,6 @@ function renderGame(state) {
 
   // Drawn tile
   document.getElementById('my-fichas') && (document.getElementById('my-fichas').textContent = state.myFichas);
-  // Fichas as colored squares
-  const fichasDots = document.getElementById('fichas-dots');
-  if (fichasDots) {
-    fichasDots.innerHTML = '';
-    fichasDots.style.display = 'flex';
-    fichasDots.style.gap = '4px';
-    fichasDots.style.flexWrap = 'wrap';
-    const playerColor = PLAYER_COLORS[state.mySeat];
-    const total = state.myFichas || 0;
-    for (let i = 0; i < total; i++) {
-      const dot = document.createElement('span');
-      dot.className = 'ficha-dot';
-      dot.style.background = playerColor;
-      fichasDots.appendChild(dot);
-    }
-    if (total === 0) {
-      const none = document.createElement('span');
-      none.style.cssText = 'font-size:.75rem;color:#aaa;font-style:italic;';
-      none.textContent = 'sem fichas';
-      fichasDots.appendChild(none);
-    }
-  }
   const dtd = document.getElementById('drawn-tile-display');
   const dtDesc = document.getElementById('drawn-tile-desc');
   if (isMyTurn && state.drawnTile && !state.drawnTile.hidden) {
