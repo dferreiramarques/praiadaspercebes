@@ -1110,7 +1110,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
     100% { box-shadow: 0 0 0 0px rgba(255,255,255,0), 0 0 0 0px rgba(2,62,138,0); transform: scale(1); }
   }
   .tile.last-placed {
-    animation: tile-pulse 0.7s ease-out 3;
+    animation: tile-pulse 0.7s ease-out 2;
     z-index: 5;
   }
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
