@@ -814,6 +814,21 @@ function nextTurn(lobby) {
     endGame(lobby);
     return;
   }
+  // If grid is completely full (no valid placements), discard tiles and skip turns
+  // until a valid placement is found or deck/player count triggers end
+  let safetyLimit = g.n * 2;
+  while (getValidPlacements(g.board).length === 0 && safetyLimit-- > 0) {
+    g.drawnTile = null;
+    if (g.deck.length < g.n) { endGame(lobby); return; }
+    g.currentPlayer = (g.currentPlayer + 1) % g.n;
+    g.drawnTile = drawTile(g);
+    if (!g.drawnTile) { endGame(lobby); return; }
+  }
+  if (getValidPlacements(g.board).length === 0) {
+    // Grid truly full — end game
+    endGame(lobby);
+    return;
+  }
   broadcastGame(lobby);
   maybeScheduleBot(lobby);
 }
@@ -1079,6 +1094,115 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .winner-banner{font-size:1.9rem;font-weight:900;color:var(--deep);}
   .notif{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--dark);color:#fff;padding:13px 26px;border-radius:13px;font-size:.9rem;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center;}
   .notif.show{opacity:1;}
+
+  /* ── Mobile Layout ── */
+  @media (max-width:600px) {
+    html { font-size:15px; }
+
+    /* Lobby & waiting screens */
+    #screen-lobby, #screen-waiting { padding:14px; }
+    .lobby-header h2 { font-size:1.3rem; }
+    .sunset-title { font-size:2rem !important; }
+
+    /* Topbar: collapse to 2 rows */
+    .game-topbar {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      padding: 7px 10px;
+      gap: 4px;
+    }
+    .topbar-players {
+      grid-column: 1;
+      grid-row: 1;
+      font-size: .72rem;
+      gap: 5px;
+    }
+    .topbar-title { display: none; }
+    .topbar-right {
+      grid-column: 2;
+      grid-row: 1 / 3;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .game-status {
+      font-size: .7rem;
+      grid-column: 1;
+      grid-row: 2;
+      white-space: normal;
+      max-width: 200px;
+    }
+    .deck-counter { font-size: .68rem; padding: 3px 7px; }
+    .btn-rules { font-size: .68rem; padding: 4px 8px; }
+    .tp { font-size: .7rem; padding: 3px 7px; }
+
+    /* Hide turn-guide on mobile */
+    .turn-guide { display: none; }
+
+    /* Board tiles smaller */
+    .tile { width: 60px !important; height: 60px !important; font-size: 1.2rem !important; border-radius: 9px !important; }
+    .tile .bathers { font-size: .6rem !important; }
+    .tile .guard-marker { font-size: 1.1rem !important; }
+    .valid-cell { width: 60px !important; height: 60px !important; font-size: 1.3rem !important; }
+
+    /* Bottom panel: stack vertically, compact height */
+    .bottom-panel {
+      flex-direction: column;
+      height: auto;
+      max-height: 46vh;
+      overflow: hidden;
+    }
+    .panel-turn {
+      border-right: none;
+      border-bottom: 1px solid #eee;
+      padding: 8px 12px;
+      flex-shrink: 0;
+    }
+    .panel-objectives {
+      padding: 8px 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    /* On mobile, objectives panel is hidden by default, toggled */
+    .panel-objectives.mob-hidden { display: none; }
+
+    /* Compact player badge + fichas */
+    .my-color-badge { font-size: .72rem; padding: 2px 7px; }
+    .ficha-dot { width: 11px; height: 11px; }
+
+    /* Tile + guard buttons row stays horizontal but more compact */
+    .tile-main-row { gap: 10px; }
+    .drawn-tile { width: 52px !important; height: 52px !important; font-size: 1.4rem !important; }
+    .drawn-tile-label { font-size: .6rem !important; width: 52px !important; }
+    .guard-row { flex-wrap: wrap; gap: 4px; }
+    .btn-sm { padding: 6px 10px; font-size: .76rem; }
+    .panel-label { font-size: .75rem; margin-bottom: 3px; }
+
+    /* Obj toggle button */
+    .mob-obj-toggle {
+      display: flex !important;
+      align-items: center;
+      gap: 5px;
+      font-size: .72rem;
+      font-weight: 700;
+      color: var(--deep);
+      background: var(--sand);
+      border: 1px solid var(--sand2);
+      border-radius: 8px;
+      padding: 3px 9px;
+      cursor: pointer;
+      margin-top: 4px;
+      align-self: flex-start;
+    }
+    .obj-card { font-size: .68rem; padding: 4px 7px; }
+    .obj-pts { font-size: .75rem; }
+
+    /* Modal */
+    .modal { padding: 16px 18px; border-radius: 14px; }
+    .modal h2 { font-size: 1.1rem; }
+    .modal h3 { font-size: .85rem; }
+    .modal p, .modal li { font-size: .78rem; }
+  }
 </style>
 </head>
 <body>
@@ -1223,10 +1347,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
             </div>
           </div>
         </div>
+        <!-- Mobile: toggle objectives -->
+        <button class="mob-obj-toggle" id="btn-mob-objs" style="display:none">Objetivos ▾</button>
       </div>
 
       <!-- Right: objectives -->
-      <div class="panel-objectives">
+      <div class="panel-objectives mob-hidden" id="panel-objectives">
         <div class="panel-label">Objetivos</div>
         <div class="obj-list" id="obj-list"></div>
       </div>
@@ -1572,13 +1698,16 @@ function renderGame(state) {
   renderBoard(state);
   // Objectives
   renderObjs(state);
+  // Mobile layout sync
+  if (typeof applyMobileLayout === 'function') applyMobileLayout();
 }
 
 function renderBoard(state) {
   const canvas = document.getElementById('board-canvas');
   canvas.innerHTML = '';
-  const TILE_SIZE = 84;
-  const GAP = 6;
+  const isMobile = window.innerWidth <= 600;
+  const TILE_SIZE = isMobile ? 60 : 84;
+  const GAP = isMobile ? 4 : 6;
   const STEP = TILE_SIZE + GAP;
   const board = state.board || [];
   if (board.length === 0) return;
@@ -1735,6 +1864,35 @@ document.getElementById('btn-restart').onclick = () => {
 document.getElementById('btn-guard-h').onclick = () => send({type:'PLACE_GUARD', dir:'h'});
 document.getElementById('btn-guard-v').onclick = () => send({type:'PLACE_GUARD', dir:'v'});
 document.getElementById('btn-guard-skip').onclick = () => send({type:'SKIP_GUARD'});
+
+// ── Mobile: objectives toggle ──────────────────────────────────────────────────
+const mobObjsBtn = document.getElementById('btn-mob-objs');
+const panelObjs = document.getElementById('panel-objectives');
+let mobObjsOpen = false;
+
+function applyMobileLayout() {
+  const isMobile = window.innerWidth <= 600;
+  mobObjsBtn.style.display = isMobile ? 'flex' : 'none';
+  if (isMobile) {
+    if (mobObjsOpen) {
+      panelObjs.classList.remove('mob-hidden');
+    } else {
+      panelObjs.classList.add('mob-hidden');
+    }
+  } else {
+    // Desktop: always show objectives, remove toggle class
+    panelObjs.classList.remove('mob-hidden');
+  }
+}
+
+mobObjsBtn.onclick = () => {
+  mobObjsOpen = !mobObjsOpen;
+  mobObjsBtn.textContent = mobObjsOpen ? 'Objetivos ▴' : 'Objetivos ▾';
+  applyMobileLayout();
+};
+
+window.addEventListener('resize', applyMobileLayout);
+applyMobileLayout();
 
 document.getElementById('btn-leave-game').onclick = () => {
   if (!confirm('Sair do jogo? Vais perder a tua posição.')) return;
