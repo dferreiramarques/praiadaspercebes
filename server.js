@@ -960,6 +960,13 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .inp-wrap{display:flex;gap:10px;width:100%;max-width:420px;}
   input{flex:1;padding:14px 18px;border:2px solid var(--sea2);border-radius:14px;font-size:1rem;outline:none;background:#ffffffe0;}
   input:focus{border-color:var(--deep);}
+  @media(max-width:480px){
+    #screen-name{gap:14px;}
+    .sunset-title{font-size:2.2rem !important;}
+    .subtitle{font-size:.85rem;}
+    .inp-wrap{flex-direction:column;align-items:stretch;}
+    .inp-wrap .btn{width:100%;}
+  }
   .btn{padding:14px 22px;border:none;border-radius:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:transform .1s,box-shadow .1s;}
   .btn:active{transform:scale(.96);}
   .btn-primary{background:linear-gradient(135deg,var(--sea),var(--deep));color:#fff;box-shadow:0 4px 14px rgba(0,80,160,.3);}
@@ -993,11 +1000,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
   /* ── Game Screen ── */
   #screen-game{padding:0;gap:0;width:100%;align-items:stretch !important;height:100vh;overflow:hidden;flex-direction:column !important;}
-  .game-topbar{background:var(--deep);color:#fff;padding:10px 18px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;flex-shrink:0;}
-  .topbar-players{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  .game-topbar{background:var(--deep);color:#fff;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-shrink:0;}
+  .topbar-players{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;min-width:0;}
+  .topbar-title{display:none;}
   .topbar-right{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
-  .topbar-title{text-align:center;font-size:.9rem;font-weight:700;color:#caf0f8;white-space:nowrap;}
-  .game-status{font-size:.82rem;color:#caf0f8;}
+  .game-status{font-size:.78rem;color:#555;font-style:italic;}
+  .board-footer{display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 14px;flex-shrink:0;}
   .tp{padding:5px 11px;border-radius:20px;font-size:.8rem;font-weight:700;background:#ffffff20;display:flex;align-items:center;gap:6px;}
   .tp.active{background:#ffffff40;outline:2px solid #ffd166;}
   .tp.me{outline:2px solid #06d6a0;}
@@ -1006,7 +1014,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .btn-rules:hover{background:#ffffff33;}
   .btn-leave-game{background:#e6394622;border:1px solid #e6394666;}
   .btn-leave-game:hover{background:#e6394644;}
-  .deck-counter{background:#ffffff22;border:1px solid #ffffff33;color:#caf0f8;padding:5px 10px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap;}
+  .deck-counter{background:#e8f4f8;border:1px solid #b0d8e8;color:var(--deep);padding:4px 10px;border-radius:20px;font-size:.78rem;font-weight:700;white-space:nowrap;}
+  .board-footer .btn-rules{background:#e8f4f8;border:1px solid #b0d8e8;color:var(--deep);}
 
   /* ── Main layout: board centered, bottom panel ── */
   .game-body{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0;}
@@ -1102,39 +1111,17 @@ const CLIENT_HTML = `<!DOCTYPE html>
     /* Lobby & waiting screens */
     #screen-lobby, #screen-waiting { padding:14px; }
     .lobby-header h2 { font-size:1.3rem; }
-    .sunset-title { font-size:2rem !important; }
 
-    /* Topbar: collapse to 2 rows */
-    .game-topbar {
-      grid-template-columns: 1fr auto;
-      grid-template-rows: auto auto;
-      padding: 7px 10px;
-      gap: 4px;
-    }
-    .topbar-players {
-      grid-column: 1;
-      grid-row: 1;
-      font-size: .72rem;
-      gap: 5px;
-    }
-    .topbar-title { display: none; }
-    .topbar-right {
-      grid-column: 2;
-      grid-row: 1 / 3;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 4px;
-    }
-    .game-status {
-      font-size: .7rem;
-      grid-column: 1;
-      grid-row: 2;
-      white-space: normal;
-      max-width: 200px;
-    }
-    .deck-counter { font-size: .68rem; padding: 3px 7px; }
-    .btn-rules { font-size: .68rem; padding: 4px 8px; }
-    .tp { font-size: .7rem; padding: 3px 7px; }
+    /* Topbar: more compact */
+    .game-topbar { padding: 6px 10px; }
+    .topbar-players { font-size: .7rem; gap: 4px; }
+    .tp { padding: 3px 7px; font-size: .7rem; }
+    .btn-leave-game { font-size: .68rem; padding: 4px 8px; }
+
+    /* Board footer compact */
+    .board-footer { padding: 4px 10px; gap: 8px; }
+    .deck-counter { font-size: .7rem; padding: 3px 8px; }
+    .board-footer .btn-rules { font-size: .7rem; padding: 3px 8px; }
 
     /* Hide turn-guide on mobile */
     .turn-guide { display: none; }
@@ -1145,38 +1132,23 @@ const CLIENT_HTML = `<!DOCTYPE html>
     .tile .guard-marker { font-size: 1.1rem !important; }
     .valid-cell { width: 60px !important; height: 60px !important; font-size: 1.3rem !important; }
 
-    /* Bottom panel: stack vertically, compact height */
-    .bottom-panel {
-      flex-direction: column;
-      height: auto;
-      max-height: 46vh;
-      overflow: hidden;
-    }
-    .panel-turn {
-      border-right: none;
-      border-bottom: 1px solid #eee;
-      padding: 8px 12px;
-      flex-shrink: 0;
-    }
-    .panel-objectives {
-      padding: 8px 12px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    /* On mobile, objectives panel is hidden by default, toggled */
+    /* Bottom panel: stack vertically */
+    .bottom-panel { flex-direction: column; height: auto; max-height: 46vh; overflow: hidden; }
+    .panel-turn { border-right: none; border-bottom: 1px solid #eee; padding: 8px 12px; flex-shrink: 0; }
+    .panel-objectives { padding: 8px 12px; overflow-y: auto; flex: 1; }
     .panel-objectives.mob-hidden { display: none; }
 
-    /* Compact player badge + fichas */
+    /* Badge row compact */
     .my-color-badge { font-size: .72rem; padding: 2px 7px; }
     .ficha-dot { width: 11px; height: 11px; }
+    #game-status { font-size: .7rem; }
 
-    /* Tile + guard buttons row stays horizontal but more compact */
+    /* Tile + guard buttons */
     .tile-main-row { gap: 10px; }
     .drawn-tile { width: 52px !important; height: 52px !important; font-size: 1.4rem !important; }
     .drawn-tile-label { font-size: .6rem !important; width: 52px !important; }
     .guard-row { flex-wrap: wrap; gap: 4px; }
     .btn-sm { padding: 6px 10px; font-size: .76rem; }
-    .panel-label { font-size: .75rem; margin-bottom: 3px; }
 
     /* Obj toggle button */
     .mob-obj-toggle {
@@ -1289,13 +1261,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 <div id="screen-game" class="screen">
   <div class="game-topbar">
     <div class="topbar-players" id="tp-players"></div>
-    <div class="topbar-title">Praia das Percebes</div>
-    <div class="topbar-right">
-      <div class="game-status" id="game-status">A aguardar...</div>
-      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">Baralho: <span id="deck-count">—</span></div>
-      <button class="btn-rules" id="btn-show-rules">Regras</button>
-      <button class="btn-rules btn-leave-game" id="btn-leave-game">Sair</button>
-    </div>
+    <button class="btn-rules btn-leave-game" id="btn-leave-game">Sair</button>
   </div>
   <div class="game-body">
     <!-- Board: centered, grows from middle -->
@@ -1303,6 +1269,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
       <div class="board-scroll">
         <div class="board-canvas" id="board-canvas"></div>
       </div>
+    </div>
+
+    <!-- Board footer: deck counter + rules, centered -->
+    <div class="board-footer">
+      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">Baralho: <span id="deck-count">—</span></div>
+      <button class="btn-rules" id="btn-show-rules">Regras</button>
     </div>
 
     <!-- Turn sequence strip -->
@@ -1321,10 +1293,8 @@ const CLIENT_HTML = `<!DOCTYPE html>
     <div class="bottom-panel">
       <!-- Left: turn panel -->
       <div class="panel-turn">
-        <!-- Player badge -->
+        <!-- Player badge + fichas + status inline -->
         <div id="my-color-badge-wrap"></div>
-        <!-- Label -->
-        <div class="panel-label">Tile Retirado</div>
         <!-- Tile + right column -->
         <div class="tile-main-row">
           <div class="tile-col">
@@ -1590,6 +1560,11 @@ function renderGame(state) {
     none.textContent = 'sem fichas';    fichasDots.appendChild(none);
   }
   badgeRow.appendChild(fichasDots);
+  // Status inline after fichas
+  const statusInline = document.createElement('span');
+  statusInline.id = 'game-status';
+  statusInline.style.cssText = 'font-size:.75rem;color:#555;font-style:italic;margin-left:4px;flex-shrink:1;min-width:0;';
+  badgeRow.appendChild(statusInline);
   badgeWrap.appendChild(badgeRow);
 
   // Deck counter
@@ -1600,7 +1575,7 @@ function renderGame(state) {
     const isLow = remaining <= state.n;
     deckCountEl.textContent = remaining + '/' + total;
     const counterEl = document.getElementById('deck-counter');
-    if (counterEl) counterEl.style.background = isLow ? '#e6394644' : '#ffffff22';
+    if (counterEl) counterEl.style.background = isLow ? '#fde8ea' : '#e8f4f8';
   }
 
   // Top bar players
@@ -1888,7 +1863,11 @@ function applyMobileLayout() {
 mobObjsBtn.onclick = () => {
   mobObjsOpen = !mobObjsOpen;
   mobObjsBtn.textContent = mobObjsOpen ? 'Objetivos ▴' : 'Objetivos ▾';
-  applyMobileLayout();
+  if (mobObjsOpen) {
+    panelObjs.classList.remove('mob-hidden');
+  } else {
+    panelObjs.classList.add('mob-hidden');
+  }
 };
 
 window.addEventListener('resize', applyMobileLayout);
