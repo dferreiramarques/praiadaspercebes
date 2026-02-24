@@ -310,7 +310,7 @@ function newGame(names, isSolo) {
   boardSet(board, 0, 0, { id: 0, bathers: 1, type: 'normal' }); // starting tile
 
   return {
-    players: names.map(name => ({ name, pts: 0, guards: [], fichas: 5, objPts: 0 })),
+    players: names.map(name => ({ name, pts: 0, guards: [], fichas: 6, objPts: 0 })),
     n: names.length,
     deck,
     totalDeck,
@@ -1105,7 +1105,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
     <h3>Pontuação (só no final)</h3>
     <ul>
       <li><b>Salva-vidas</b> — soma os banhistas no seu segmento de linha/coluna (para nas rochas), com multiplicadores de pranchas.</li>
-      <li><b>Fichas restantes</b> — +2 pts por cada ficha não gasta (cada jogador começa com 5 fichas).</li>
+      <li><b>Fichas restantes</b> — +2 pts por cada ficha não gasta (cada jogador começa com 6 fichas).</li>
       <li><b>Objetivos</b> — soma os pontos das cartas conquistadas.</li>
     </ul>
 
