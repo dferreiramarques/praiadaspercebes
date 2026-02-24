@@ -432,7 +432,7 @@ function lobbyInfo(lobby) {
   return {
     id: lobby.id, name: lobby.name, maxPlayers: lobby.maxPlayers,
     players: lobby.names.filter(Boolean).length,
-    inGame: !!lobby.game,
+    inGame: !!lobby.game && lobby.game.phase !== 'GAME_OVER',
   };
 }
 
@@ -593,6 +593,28 @@ function endGame(lobby) {
   g.phase = 'GAME_OVER';
   computeFinalScores(g);
   broadcastGame(lobby);
+  // Reset lobby immediately — clients already have the final scores rendered
+  // from the GAME_STATE broadcast above. No need to hold slots.
+  setTimeout(() => resetLobby(lobby), 300);
+}
+
+function resetLobby(lobby) {
+  // Clear all player slots and sessions, reset game
+  for (let i = 0; i < lobby.maxPlayers; i++) {
+    if (lobby.tokens[i]) delete sessions[lobby.tokens[i]];
+    // Disconnect the ws gracefully if still open
+    const ws = lobby.players[i];
+    if (ws && ws.readyState === 1) {
+      sendTo(ws, { type: 'LOBBY_RESET' });
+    }
+    lobby.players[i] = null;
+    lobby.names[i] = '';
+    lobby.tokens[i] = null;
+    if (lobby.graceTimers[i]) { clearTimeout(lobby.graceTimers[i]); lobby.graceTimers[i] = null; }
+  }
+  lobby.game = null;
+  lobby.aiSeats = null;
+  broadcastLobbyList();
 }
 
 function hardLeaveBySlot(lobby, seat) {
@@ -725,8 +747,7 @@ function handleAction(ws, msg) {
     }
     case 'RESTART': {
       if (!g || g.phase !== 'GAME_OVER') return;
-      lobby.game = null;
-      broadcastLobby(lobby);
+      resetLobby(lobby);
       break;
     }
   }
@@ -830,6 +851,11 @@ function handleReconnect(ws, msg) {
   if (!sess) { sendTo(ws, { type: 'RECONNECT_FAIL' }); return; }
   const lobby = lobbies[sess.lobbyId];
   if (!lobby) { sendTo(ws, { type: 'RECONNECT_FAIL' }); return; }
+  // If game is over or lobby was already reset, reject reconnect so slot stays free
+  if (!lobby.game || lobby.game.phase === 'GAME_OVER') {
+    delete sessions[msg.token];
+    sendTo(ws, { type: 'RECONNECT_FAIL' }); return;
+  }
   const { seat, name } = sess;
   const existing = lobby.players[seat];
   if (existing && existing !== ws && existing.readyState === 1) {
@@ -1205,6 +1231,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
   <div class="winner-banner" id="end-winner"></div>
   <table class="score-table" id="score-table"></table>
   <button class="btn btn-primary" id="btn-restart" style="width:100%">↺ Nova Partida</button>
+  <div id="end-countdown" style="font-size:.78rem;color:#888;font-style:italic;text-align:center;margin-top:4px;"></div>
 </div>
 
 <div class="notif" id="notif"></div>
@@ -1276,8 +1303,23 @@ function handleMsg(msg) {
       break;
     case 'RECONNECT_FAIL':
       sessionStorage.removeItem('pp_token');
-      myToken=''; myName='';
-      showScreen('screen-name');
+      myToken=''; inGame=false; currentLobbyId='';
+      // If already on score screen (game just ended), stay there
+      if (!document.getElementById('screen-end').classList.contains('active')) {
+        myName='';
+        showScreen('screen-name');
+      }
+      break;
+    case 'LOBBY_RESET':
+      // Server cleared the table — clean up state
+      sessionStorage.removeItem('pp_token');
+      myToken=''; inGame=false; currentLobbyId='';
+      // If player is already on the score screen, stay there — don't redirect
+      if (!document.getElementById('screen-end').classList.contains('active')) {
+        send({type:'LOBBIES'});
+        showScreen('screen-lobby');
+        renderLobbyList(_cachedLobbies);
+      }
       break;
     case 'ERROR':
       notif('⚠️ '+msg.text);
@@ -1659,12 +1701,25 @@ function renderEndScreen(state) {
     tbody.appendChild(tr);
   }
   table.appendChild(tbody);
+
+  // Countdown to auto-return to lobby (15s matches server reset)
+  const countdownEl = document.getElementById('end-countdown');
+  if (countdownEl) {
+    let secs = 15;
+    countdownEl.textContent = 'A voltar ao lobby em '+secs+'s…';
+    const iv = setInterval(() => {
+      secs--;
+      if (secs <= 0) { clearInterval(iv); countdownEl.textContent = ''; }
+      else countdownEl.textContent = 'A voltar ao lobby em '+secs+'s…';
+    }, 1000);
+  }
 }
 
 document.getElementById('btn-restart').onclick = () => {
-  send({type:'RESTART'});
-  showScreen('screen-waiting');
   inGame=false;
+  send({type:'LOBBIES'});
+  showScreen('screen-lobby');
+  renderLobbyList(_cachedLobbies);
 };
 
 // ── Guard Buttons ──────────────────────────────────────────────────────────────
@@ -1763,6 +1818,11 @@ wss.on('connection', ws => {
     if (!lobby) return;
     const { seat, token } = st;
     lobby.players[seat] = null;
+    // If game is already over, free the slot immediately — no grace period needed
+    if (!lobby.game || lobby.game.phase === 'GAME_OVER') {
+      hardLeaveBySlot(lobby, seat);
+      return;
+    }
     lobby.players.forEach((p, i) => {
       if (p && i !== seat) sendTo(p, { type: 'OPPONENT_DISCONNECTED_GRACE', seat, name: lobby.names[seat], graceMs: GRACE_MS });
     });
