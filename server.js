@@ -310,7 +310,7 @@ function newGame(names, isSolo) {
   boardSet(board, 0, 0, { id: 0, bathers: 1, type: 'normal' }); // starting tile
 
   return {
-    players: names.map(name => ({ name, pts: 0, guards: [], fichas: 8, objPts: 0 })),
+    players: names.map(name => ({ name, pts: 0, guards: [], fichas: 5, objPts: 0 })),
     n: names.length,
     deck,
     totalDeck,
@@ -1061,7 +1061,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
 <!-- Lobby Screen -->
 <div id="screen-lobby" class="screen">
-  <div class="lobby-header"><h2>🌊 Escolhe uma mesa</h2></div>
+  <div class="lobby-header"><h2>Escolhe uma mesa</h2></div>
   <div class="lobby-section-title">Multijogador</div>
   <div class="table-list" id="lobby-list-human"></div>
   <div class="lobby-section-title">Jogar com IA</div>
@@ -1070,7 +1070,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
 <!-- Waiting Screen -->
 <div id="screen-waiting" class="screen">
-  <h2 style="color:var(--deep)">🏖 Sala de Espera</h2>
+  <h2 style="color:var(--deep)">Sala de Espera</h2>
   <p id="waiting-table-name" style="color:#555;font-size:.9rem"></p>
   <div class="waiting-players" id="waiting-players"></div>
   <button class="btn btn-primary" id="btn-start" style="width:100%">▶ Iniciar Jogo</button>
@@ -1081,37 +1081,41 @@ const CLIENT_HTML = `<!DOCTYPE html>
 <div class="modal-overlay" id="modal-rules">
   <div class="modal">
     <button class="modal-close" id="btn-modal-close">✕</button>
-    <h2>📋 Regras — Praia das Percebes</h2>
+    <h2>Regras — Praia das Percebes</h2>
 
-    <h3>🎯 Objetivo</h3>
-    <p>Coloca salva-vidas em tiles da praia. Cada salva-vidas vigia uma linha ou coluna inteira e no final do jogo vale os banhistas nessa linha/coluna.</p>
+    <h3>Objetivo</h3>
+    <p>Coloca salva-vidas em tiles da praia. Cada salva-vidas vigia uma linha ou coluna e no final do jogo vale os banhistas nesse segmento.</p>
 
-    <h3>🔄 Sequência de Turno</h3>
-    <div class="rule-step"><div class="rule-num">1</div><p><b>Pescar tile</b> — retira automaticamente o tile do topo do deck.</p></div>
-    <div class="rule-step"><div class="rule-num">2</div><p><b>Colocar tile</b> — coloca-o ortogonalmente adjacente a um tile existente (nunca diagonal). Máximo 7 tiles por linha/coluna.</p></div>
+    <h3>Baralho</h3>
+    <p>44 tiles no total (42 para 3 jogadores): 8 × 1 banhista, 12 × 2 banhistas, 6 × 3 banhistas, 4 pranchas de surf, 2 rochas, 12 areia. O jogo termina quando o baralho tem menos tiles do que jogadores.</p>
+
+    <h3>Sequência de Turno</h3>
+    <div class="rule-step"><div class="rule-num">1</div><p><b>Pescar tile</b> — retira automaticamente o tile do topo do baralho.</p></div>
+    <div class="rule-step"><div class="rule-num">2</div><p><b>Colocar tile</b> — coloca-o ortogonalmente adjacente a um tile existente (nunca diagonal). A grelha nunca pode exceder 7×7 slots.</p></div>
     <div class="rule-step"><div class="rule-num">3</div><p><b>Salva-vidas (opcional)</b> — coloca 1 salva-vidas no tile que acabaste de jogar: horizontal (↔) ou vertical (↕). Gasta 1 ficha. Só 1 salva-vidas por linha e por coluna em todo o tabuleiro.</p></div>
     <div class="rule-step"><div class="rule-num">4</div><p><b>Verificar objetivos</b> — se completaste um objetivo revelado, recolhes a carta imediatamente.</p></div>
 
-    <h3>🏖 Tiles Especiais</h3>
+    <h3>Tiles Especiais</h3>
     <ul>
-      <li><b>🏄 Prancha de surf</b> — conta 1 banhista mas dobra todos os pontos dessa linha/coluna. Várias pranchas multiplicam (×4, ×8…).</li>
-      <li><b>🪨 Rocha</b> — vale 0 banhistas e bloqueia a linha/coluna. Não podes colocar salva-vidas em rochas.</li>
+      <li><b>Prancha de surf (↔×2)</b> — conta 1 banhista mas dobra todos os pontos dessa linha/coluna. Várias pranchas multiplicam (×4, ×8…).</li>
+      <li><b>Rocha</b> — vale 0 banhistas e bloqueia a contagem da linha/coluna. Não podes colocar salva-vidas em rochas.</li>
+      <li><b>Areia</b> — vale 0 banhistas. Ocupa espaço na grelha mas não contribui para a pontuação.</li>
     </ul>
 
-    <h3>💰 Pontuação (só no final)</h3>
+    <h3>Pontuação (só no final)</h3>
     <ul>
-      <li><b>Salva-vidas</b> — soma os banhistas no seu segmento de linha/coluna (parado em rochas), com multiplicadores de pranchas.</li>
-      <li><b>Fichas restantes</b> — +2 pts por cada ficha não gasta.</li>
+      <li><b>Salva-vidas</b> — soma os banhistas no seu segmento de linha/coluna (para nas rochas), com multiplicadores de pranchas.</li>
+      <li><b>Fichas restantes</b> — +2 pts por cada ficha não gasta (cada jogador começa com 5 fichas).</li>
       <li><b>Objetivos</b> — soma os pontos das cartas conquistadas.</li>
     </ul>
 
-    <h3>🏁 Fim de Jogo</h3>
-    <p>O jogo termina quando o deck esgota <b>ou</b> um jogador fica sem fichas (os outros jogam mais 1 turno cada).</p>
+    <h3>Fim de Jogo</h3>
+    <p>O jogo termina quando o baralho fica com menos tiles do que jogadores, <b>ou</b> quando um jogador fica sem fichas (os restantes jogam mais 1 turno cada).</p>
 
-    <h3>🎯 Objetivos Disponíveis</h3>
+    <h3>Objetivos Disponíveis</h3>
     <ul>
-      <li>Quadrado 3×3 <span class="score-pill">+2</span></li>
-      <li>Quadrado 5×5 <span class="score-pill">+2</span></li>
+      <li>Quadrado 3×3 (9 tiles) <span class="score-pill">+2</span></li>
+      <li>Quadrado 5×5 (25 tiles) <span class="score-pill">+2</span></li>
       <li>Linha de 5 tiles <span class="score-pill">+4</span></li>
       <li>Coluna de 5 tiles <span class="score-pill">+4</span></li>
       <li>2 Pranchas adjacentes <span class="score-pill">+4</span></li>
@@ -1126,12 +1130,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
 <div id="screen-game" class="screen">
   <div class="game-topbar">
     <div class="topbar-players" id="tp-players"></div>
-    <div class="topbar-title">🏖 Praia das Percebes</div>
+    <div class="topbar-title">Praia das Percebes</div>
     <div class="topbar-right">
       <div class="game-status" id="game-status">A aguardar...</div>
-      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">🃏 <span id="deck-count">—</span></div>
-      <button class="btn-rules" id="btn-show-rules">📋 Regras</button>
-      <button class="btn-rules btn-leave-game" id="btn-leave-game">🚪 Sair</button>
+      <div class="deck-counter" id="deck-counter" title="Tiles restantes no baralho">Baralho: <span id="deck-count">—</span></div>
+      <button class="btn-rules" id="btn-show-rules">Regras</button>
+      <button class="btn-rules btn-leave-game" id="btn-leave-game">Sair</button>
     </div>
   </div>
   <div class="game-body">
@@ -1151,7 +1155,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
       <div class="tg-step"><div class="tg-num">3</div> Salva-vidas? (↔↕)</div>
       <div class="tg-arrow">›</div>
       <div class="tg-step"><div class="tg-num">4</div> Objetivos?</div>
-      <div class="tg-score">🛟 pontos = banhistas na linha · 🏄 ×2 · 🪨 bloqueia · +2/ficha restante</div>
+      <div class="tg-score">pontos = banhistas na linha · prancha ×2 · rocha bloqueia · +2/ficha restante</div>
     </div>
 
     <!-- Bottom 2-column panel -->
@@ -1161,7 +1165,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
         <!-- Player badge -->
         <div id="my-color-badge-wrap"></div>
         <!-- Label -->
-        <div class="panel-label">🃏 Tile Retirado</div>
+        <div class="panel-label">Tile Retirado</div>
         <!-- Tile + right column -->
         <div class="tile-main-row">
           <div class="tile-col">
@@ -1180,7 +1184,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
               </div>
             </div>
             <div id="waiting-turn" class="waiting-msg" style="opacity:0;pointer-events:none;transition:opacity .15s;">
-              ⏳ Vez de outro jogador...
+              Vez de outro jogador...
             </div>
           </div>
         </div>
@@ -1188,7 +1192,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
       <!-- Right: objectives -->
       <div class="panel-objectives">
-        <div class="panel-label">🎯 Objetivos</div>
+        <div class="panel-label">Objetivos</div>
         <div class="obj-list" id="obj-list"></div>
       </div>
     </div>
@@ -1406,8 +1410,7 @@ function renderGame(state) {
   if (totalFichas === 0) {
     const none = document.createElement('span');
     none.style.cssText = 'font-size:.72rem;color:#aaa;font-style:italic;';
-    none.textContent = 'sem fichas';
-    fichasDots.appendChild(none);
+    none.textContent = 'sem fichas';    fichasDots.appendChild(none);
   }
   badgeRow.appendChild(fichasDots);
   badgeWrap.appendChild(badgeRow);
@@ -1435,24 +1438,24 @@ function renderGame(state) {
     sw2.style.background = PLAYER_COLORS[i];
     span.appendChild(sw2);
     const guardCount = (state.guards||[]).filter(g=>g.playerIdx===i).length;
-    span.appendChild(document.createTextNode(p.name + ' 🛟'+p.fichas + (guardCount>0?' 💂'+guardCount:'')));
+    span.appendChild(document.createTextNode(p.name + ' ·'+p.fichas + (guardCount>0?' ↔'+guardCount:'')));
     tpEl.appendChild(span);
   }
 
   // Status
   const statusEl = document.getElementById('game-status');
   if (phase === 'GAME_OVER') {
-    statusEl.textContent = '🏁 Fim de jogo!';
+    statusEl.textContent = 'Fim de jogo!';
     renderEndScreen(state);
     return;
   }
   const curName = state.players[state.currentPlayer]?.name;
   if (isMyTurn && (phase==='PLACE_TILE'||phase==='PLACE_TILE_EXTRA')) {
-    statusEl.textContent = '🎯 A tua vez! Coloca o tile.';
+    statusEl.textContent = 'A tua vez! Coloca o tile.';
   } else if (isMyTurn && phase==='PLACE_GUARD') {
-    statusEl.textContent = '🛟 Colocar salva-vidas?';
+    statusEl.textContent = 'Colocar salva-vidas?';
   } else {
-    statusEl.textContent = '⏳ Vez de '+curName;
+    statusEl.textContent = 'Vez de '+curName;
   }
 
   // Drawn tile
@@ -1635,7 +1638,7 @@ function renderEndScreen(state) {
   }));
   players.sort((a,b)=>b.total-a.total);
   const winner = players[0];
-  document.getElementById('end-winner').textContent = '🏆 '+winner.name+' ganhou!';
+  document.getElementById('end-winner').textContent = winner.name+' ganhou!';
   const table = document.getElementById('score-table');
   table.innerHTML = '<thead><tr><th></th><th>Jogador</th><th>Pontos</th></tr></thead>';
   const tbody = document.createElement('tbody');
