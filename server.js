@@ -1078,6 +1078,12 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .rule-num{width:24px;height:24px;border-radius:50%;background:var(--deep);color:#fff;font-size:.78rem;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
   .score-pill{display:inline-block;background:#e8f4f8;color:var(--deep);border-radius:6px;padding:2px 7px;font-size:.78rem;font-weight:700;margin-left:4px;}
 
+  /* ── Objectives Strip ── */
+  .obj-strip{background:#ffffffc0;border-bottom:1px solid #ddd;flex-shrink:0;}
+  .obj-strip-toggle{display:none;}
+  .obj-strip-inner{padding:6px 14px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;overflow-x:auto;}
+  .panel-objectives{display:none;} /* old panel no longer used */
+
   /* ── End Screen ── */
   #screen-end{justify-content:center;gap:18px;text-align:center;max-width:460px;margin:0 auto;}
   .score-table{width:100%;border-collapse:collapse;border-radius:13px;overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.1);}
@@ -1117,11 +1123,28 @@ const CLIENT_HTML = `<!DOCTYPE html>
     .tile .guard-marker { font-size: 1.1rem !important; }
     .valid-cell { width: 60px !important; height: 60px !important; font-size: 1.3rem !important; }
 
-    /* Bottom panel: stack vertically */
-    .bottom-panel { flex-direction: column; height: auto; max-height: 46vh; overflow: hidden; }
-    .panel-turn { border-right: none; border-bottom: 1px solid #eee; padding: 8px 12px; flex-shrink: 0; }
-    .panel-objectives { padding: 0; flex-shrink: 0; border-top: 1px solid #eee; }
-    .mob-obj-toggle {
+    /* Bottom panel: only player turn area, no objectives */
+    .bottom-panel { flex-direction: row; height: auto; max-height: none; overflow: visible; }
+    .panel-turn { border-right: none; padding: 8px 12px; flex: 1; flex-shrink: 0; }
+    .panel-objectives { display: none; }
+
+    /* Badge row compact */
+    .my-color-badge { font-size: .72rem; padding: 2px 7px; }
+    .ficha-dot { width: 11px; height: 11px; }
+    #game-status { font-size: .7rem; }
+
+    /* Tile + guard buttons */
+    .tile-main-row { gap: 10px; }
+    .drawn-tile { width: 52px !important; height: 52px !important; font-size: 1.4rem !important; }
+    .drawn-tile-label { font-size: .6rem !important; width: 52px !important; }
+    .guard-row { flex-wrap: wrap; gap: 4px; }
+    .btn-sm { padding: 6px 10px; font-size: .76rem; }
+
+    /* Objectives strip: at bottom on mobile, collapsible */
+    .obj-strip { order: 3; border-bottom: none; border-top: 1px solid #ddd; }
+    .game-body { order: 1; }
+    .bottom-panel { order: 4; }
+    .obj-strip-toggle {
       display: flex !important;
       width: 100%;
       align-items: center;
@@ -1129,14 +1152,14 @@ const CLIENT_HTML = `<!DOCTYPE html>
       font-size: .78rem;
       font-weight: 700;
       color: var(--deep);
-      background: #f0f8ff;
+      background: #eaf6ff;
       border: none;
-      border-bottom: 1px solid #e0e0e0;
-      padding: 8px 12px;
+      border-bottom: 1px solid #dde;
+      padding: 8px 14px;
       cursor: pointer;
     }
-    .obj-inner { padding: 8px 12px; overflow-y: auto; max-height: 30vh; }
-    .obj-inner.mob-hidden { display: none; }
+    .obj-strip-inner { flex-direction: column; gap: 5px; padding: 8px 12px; max-height: 35vh; overflow-y: auto; }
+    .obj-strip-inner.mob-hidden { display: none; }
     .obj-card { font-size: .68rem; padding: 4px 7px; }
     .obj-pts { font-size: .75rem; }
 
@@ -1234,6 +1257,15 @@ const CLIENT_HTML = `<!DOCTYPE html>
     <div class="topbar-players" id="tp-players"></div>
     <button class="btn-rules btn-leave-game" id="btn-leave-game">Sair</button>
   </div>
+
+  <!-- Objectives: always visible on desktop, collapsible strip on mobile -->
+  <div class="obj-strip" id="obj-strip">
+    <button class="obj-strip-toggle" id="btn-mob-objs" style="display:none">Objetivos ▾</button>
+    <div class="obj-strip-inner" id="obj-inner">
+      <div class="obj-list" id="obj-list"></div>
+    </div>
+  </div>
+
   <div class="game-body">
     <!-- Board: centered, grows from middle -->
     <div class="board-zone">
@@ -1288,16 +1320,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
             </div>
           </div>
         </div>
-        <!-- Mobile: toggle objectives is the header of the objectives panel below -->
-      </div>
-
-      <!-- Right: objectives (mobile: collapsible) -->
-      <div class="panel-objectives" id="panel-objectives">
-        <button class="mob-obj-toggle" id="btn-mob-objs" style="display:none">Objetivos ▾</button>
-        <div class="obj-inner mob-hidden" id="obj-inner">
-          <div class="panel-label">Objetivos</div>
-          <div class="obj-list" id="obj-list"></div>
-        </div>
+        <!-- Mobile: objectives moved to top strip -->
       </div>
     </div>
   </div>
@@ -1815,15 +1838,15 @@ document.getElementById('btn-guard-skip').onclick = () => send({type:'SKIP_GUARD
 
 // ── Mobile: objectives toggle ──────────────────────────────────────────────────
 const mobObjsBtn = document.getElementById('btn-mob-objs');
-const panelObjs = document.getElementById('panel-objectives');
 const objInner = document.getElementById('obj-inner');
 let mobObjsOpen = false;
 
 function applyMobileLayout() {
   const isMobile = window.innerWidth <= 600;
   mobObjsBtn.style.display = isMobile ? 'flex' : 'none';
-  if (!isMobile) {
-    // Desktop: always show everything
+  if (isMobile) {
+    if (!mobObjsOpen) objInner.classList.add('mob-hidden');
+  } else {
     objInner.classList.remove('mob-hidden');
   }
 }
