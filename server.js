@@ -639,6 +639,7 @@ function handleAction(ws, msg) {
   if (msg.type === 'PING')      { sendTo(ws, { type: 'PONG' }); return; }
   if (msg.type === 'LOBBIES')   { sendTo(ws, { type: 'LOBBIES', lobbies: Object.values(lobbies).map(lobbyInfo) }); return; }
   if (msg.type === 'RECONNECT') { handleReconnect(ws, msg); return; }
+  if (msg.type === 'REJOIN')    { handleRejoin(ws, msg); return; }
   if (msg.type === 'JOIN_LOBBY'){ handleJoin(ws, msg); return; }
   if (msg.type === 'LEAVE_LOBBY'){ handleLeave(ws); return; }
 
@@ -888,7 +889,32 @@ function handleReconnect(ws, msg) {
   });
 }
 
-// ─── HTTP + WebSocket Server ──────────────────────────────────────────────────
+// Rejoin: player lost their token but remembers their name + lobbyId
+// Find their slot in the active game by name and re-attach
+function handleRejoin(ws, msg) {
+  const { lobbyId, playerName } = msg;
+  const lobby = lobbies[lobbyId];
+  if (!lobby || !lobby.game || lobby.game.phase === 'GAME_OVER') {
+    sendTo(ws, { type: 'REJOIN_FAIL' }); return;
+  }
+  const name = (playerName || '').trim().slice(0, 20);
+  const seat = lobby.names.findIndex(n => n === name);
+  if (seat === -1) { sendTo(ws, { type: 'REJOIN_FAIL' }); return; }
+  // Slot found — re-attach
+  const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  if (lobby.graceTimers[seat]) { clearTimeout(lobby.graceTimers[seat]); lobby.graceTimers[seat] = null; }
+  // Clean up old session if any
+  if (lobby.tokens[seat]) delete sessions[lobby.tokens[seat]];
+  lobby.players[seat] = ws;
+  lobby.tokens[seat] = token;
+  sessions[token] = { lobbyId, seat, name };
+  wsState.set(ws, { lobbyId, seat, token });
+  sendTo(ws, { type: 'RECONNECTED', seat, name, solo: lobby.solo, newToken: token });
+  broadcastGame(lobby);
+  lobby.players.forEach((p, i) => {
+    if (p && i !== seat) sendTo(p, { type: 'OPPONENT_RECONNECTED', seat, name });
+  });
+}
 function serveStatic(req, res) {
   const safe = path.normalize(req.url).replace(/^(\.\.[\\/])+/, '');
   const file = path.join(__dirname, 'public', safe.replace(/^\//, ''));
@@ -1115,9 +1141,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
     .btn-leave-game { font-size: .68rem; padding: 4px 8px; }
 
     /* Board footer compact */
-    .board-footer { padding: 4px 10px; gap: 8px; }
-    .deck-counter { font-size: .7rem; padding: 3px 8px; }
-    .board-footer .btn-rules { font-size: .7rem; padding: 3px 8px; }
+    .board-footer { padding: 3px 10px; gap: 8px; }
+    .deck-counter { font-size: .68rem; padding: 2px 7px; }
+    .board-footer .btn-rules { font-size: .68rem; padding: 2px 7px; }
 
     /* Hide turn-guide on mobile */
     .turn-guide { display: none; }
@@ -1130,20 +1156,21 @@ const CLIENT_HTML = `<!DOCTYPE html>
 
     /* Bottom panel: only player turn area, no objectives */
     .bottom-panel { flex-direction: row; height: auto; max-height: none; overflow: visible; }
-    .panel-turn { border-right: none; padding: 8px 12px; flex: 1; flex-shrink: 0; }
+    .panel-turn { border-right: none; padding: 5px 10px; flex: 1; flex-shrink: 0; }
     .panel-objectives { display: none; }
 
     /* Badge row compact */
-    .my-color-badge { font-size: .72rem; padding: 2px 7px; }
-    .ficha-dot { width: 11px; height: 11px; }
-    #game-status { font-size: .7rem; }
+    .my-color-badge { font-size: .7rem; padding: 2px 6px; }
+    .ficha-dot { width: 10px; height: 10px; }
+    #game-status { font-size: .68rem; }
 
     /* Tile + guard buttons */
-    .tile-main-row { gap: 10px; }
-    .drawn-tile { width: 52px !important; height: 52px !important; font-size: 1.4rem !important; }
-    .drawn-tile-label { font-size: .6rem !important; width: 52px !important; }
-    .guard-row { flex-wrap: wrap; gap: 4px; }
-    .btn-sm { padding: 6px 10px; font-size: .76rem; }
+    .tile-main-row { gap: 8px; margin-top: 4px; }
+    .drawn-tile { width: 46px !important; height: 46px !important; font-size: 1.2rem !important; }
+    .drawn-tile-label { font-size: .58rem !important; width: 46px !important; }
+    .guard-row { flex-wrap: wrap; gap: 3px; }
+    .btn-sm { padding: 5px 8px; font-size: .74rem; }
+    .waiting-msg { font-size: .72rem; }
 
     /* Objectives strip: at top on mobile (stays after topbar naturally) */
     .obj-strip { border-bottom: 1px solid #ddd; border-top: none; }
@@ -1387,6 +1414,7 @@ function handleMsg(msg) {
       currentLobbyId = msg.lobbyId;
       isAiTable = msg.solo;
       sessionStorage.setItem('pp_token', myToken);
+      sessionStorage.setItem('pp_lobby', currentLobbyId);
       showScreen('screen-waiting');
       break;
     case 'LOBBY_STATE':
@@ -1404,24 +1432,31 @@ function handleMsg(msg) {
       myName = msg.name;
       myLobbySeat = msg.seat;
       isAiTable = msg.solo;
-      myToken = sessionStorage.getItem('pp_token');
+      if (msg.newToken) { myToken = msg.newToken; sessionStorage.setItem('pp_token', myToken); }
+      else myToken = sessionStorage.getItem('pp_token') || '';
       currentLobbyId = '';
+      sessionStorage.removeItem('pp_lobby');
       showScreen('screen-waiting');
       send({type:'REQUEST_STATE'});
       break;
-    case 'RECONNECT_FAIL':
+    case 'RECONNECT_FAIL': {
       sessionStorage.removeItem('pp_token');
       myToken=''; inGame=false; currentLobbyId='';
-      if (!document.getElementById('screen-end').classList.contains('active')) {
-        if (myName) {
-          // Name known — go straight to lobby
-          send({type:'LOBBIES'});
-          showScreen('screen-lobby');
-          renderLobbyList(_cachedLobbies);
-        } else {
-          showScreen('screen-name');
-        }
+      if (document.getElementById('screen-end').classList.contains('active')) break;
+      // Try rejoin by name if we know which lobby we were in
+      const savedLobby = sessionStorage.getItem('pp_lobby');
+      if (myName && savedLobby) {
+        send({type:'REJOIN', lobbyId:savedLobby, playerName:myName});
+      } else if (myName) {
+        send({type:'LOBBIES'}); showScreen('screen-lobby'); renderLobbyList(_cachedLobbies);
+      } else {
+        showScreen('screen-name');
       }
+      break;
+    }
+    case 'REJOIN_FAIL':
+      sessionStorage.removeItem('pp_lobby');
+      send({type:'LOBBIES'}); showScreen('screen-lobby'); renderLobbyList(_cachedLobbies);
       break;
     case 'LOBBY_RESET':
       // Server cleared the table — clean up state
