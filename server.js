@@ -6,7 +6,6 @@ const { WebSocketServer } = require('ws');
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PORT        = process.env.PORT || 3000;
-const MAX_LOBBIES = 5;
 const GRACE_MS    = 45000;
 const MAX_LINE    = 7;
 
@@ -23,16 +22,22 @@ const wsState  = new WeakMap();
 const sessions = {};
 
 // ─── Lobby Init ───────────────────────────────────────────────────────────────
-// 5 human tables
-for (let i = 0; i < MAX_LOBBIES; i++) {
-  const id = 'L' + (i + 1);
-  lobbies[id] = {
-    id, name: `Mesa ${i + 1}`, maxPlayers: 4,
-    players: [null,null,null,null], names: ['','','',''], tokens: [null,null,null,null],
-    game: null, graceTimers: [null,null,null,null], solo: false, aiCount: 0,
+// Human tables: 2×4p, 1×3p, 1×2p
+const HUMAN_TABLE_CONFIGS = [
+  { id:'L1', name:'Mesa 1', maxPlayers:4 },
+  { id:'L2', name:'Mesa 2', maxPlayers:4 },
+  { id:'L3', name:'Mesa 3', maxPlayers:3 },
+  { id:'L4', name:'Mesa 4', maxPlayers:2 },
+];
+for (const cfg of HUMAN_TABLE_CONFIGS) {
+  const n = cfg.maxPlayers;
+  lobbies[cfg.id] = {
+    id: cfg.id, name: cfg.name, maxPlayers: n,
+    players: Array(n).fill(null), names: Array(n).fill(''), tokens: Array(n).fill(null),
+    game: null, graceTimers: Array(n).fill(null), solo: false, aiCount: 0,
   };
 }
-// 3 AI tables: 1 player + 1 AI, 1 player + 2 AI, 1 player + 3 AI
+// AI tables: 1 human + N bots
 const AI_TABLE_CONFIGS = [
   { id:'AI2', name:'🤖 vs 1 IA (2 jog.)',  maxPlayers:2, aiCount:1 },
   { id:'AI3', name:'🤖 vs 2 IA (3 jog.)',  maxPlayers:3, aiCount:2 },
@@ -802,9 +807,8 @@ function nextTurn(lobby) {
     endGame(lobby);
     return;
   }
-  // If grid is completely full (no valid placements), discard tiles and skip turns
-  // until a valid placement is found or deck/player count triggers end
-  let safetyLimit = g.n * 2;
+  // If grid is completely full (no valid placements), skip turns until valid or end
+  let safetyLimit = g.deck.length + g.n + 2;
   while (getValidPlacements(g.board).length === 0 && safetyLimit-- > 0) {
     g.drawnTile = null;
     if (g.deck.length < g.n) { endGame(lobby); return; }
@@ -813,9 +817,7 @@ function nextTurn(lobby) {
     if (!g.drawnTile) { endGame(lobby); return; }
   }
   if (getValidPlacements(g.board).length === 0) {
-    // Grid truly full — end game
-    endGame(lobby);
-    return;
+    endGame(lobby); return;
   }
   broadcastGame(lobby);
   maybeScheduleBot(lobby);
@@ -919,7 +921,8 @@ function handleRejoin(ws, msg) {
 }
 function serveStatic(req, res) {
   const safe = path.normalize(req.url).replace(/^(\.\.[\\/])+/, '');
-  const file = path.join(__dirname, 'public', safe.replace(/^\//, ''));
+  // URL already includes 'public/' prefix, so join directly with __dirname
+  const file = path.join(__dirname, safe.replace(/^\//, ''));
   const ext  = path.extname(file).toLowerCase();
   const mime = MIME[ext];
   if (!mime) { res.writeHead(404); res.end(); return; }
