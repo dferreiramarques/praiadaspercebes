@@ -1847,10 +1847,6 @@ function renderBoard(state) {
     const emojiEl = document.createElement('div');
     emojiEl.innerHTML = tileEmoji(tile);
     div.appendChild(emojiEl);
-    const bathEl = document.createElement('div');
-    bathEl.className = 'bathers';
-    bathEl.textContent = tileLabel(tile);
-    div.appendChild(bathEl);
     const guards = guardMap[tile.r+','+tile.c] || [];
     if (guards.length > 0) {
       const gm = document.createElement('div');
