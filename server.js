@@ -2017,6 +2017,7 @@ document.getElementById('modal-rules').onclick = (e) => {
 
 // ── Tile Helpers ───────────────────────────────────────────────────────────────
 function tileImgName(tile) {
+  if (tile.id === 0) return 'tile-start.png';
   if (!tile.variantIdx) return null;
   if (tile.type === 'normal') return 'tile-normal-' + tile.bathers + '-' + tile.variantIdx + '.png';
   return 'tile-' + tile.type + '-' + tile.variantIdx + '.png';
