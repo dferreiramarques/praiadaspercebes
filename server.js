@@ -948,7 +948,7 @@ const MANIFEST = `{
   ]
 }`;
 const SW = `
-const CACHE = 'percebes-v1';
+const CACHE = 'percebes-v2';
 const SHELL = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -967,12 +967,14 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Always go to network for WebSocket upgrades and game API
   if (e.request.headers.get('upgrade') === 'websocket') return;
-  // Cache-first for static assets (icons, tile images)
+  // Cache-first for static assets (icons, tile images) — only cache 200 responses
   if (url.pathname.startsWith('/public/')) {
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
         return res;
       }))
     );
