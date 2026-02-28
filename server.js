@@ -1104,7 +1104,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
   .board-scroll::-webkit-scrollbar{display:none;}
   .board-canvas{position:relative;margin:auto;}
 
-  .tile{position:absolute;width:84px;height:84px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
+  .tile{position:absolute;width:84px;height:84px;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.6rem;border:2px solid #ccc;cursor:default;transition:transform .1s;user-select:none;}
   .tile.normal{background:linear-gradient(135deg,var(--sand),var(--sand2));}
   .tile.surf{background:linear-gradient(135deg,#ff9f1c,#ffbf69);}
   .tile.rock{background:linear-gradient(135deg,#8d8d8d,#555);color:#fff;}
@@ -1121,8 +1121,9 @@ const CLIENT_HTML = `<!DOCTYPE html>
   }
   .tile .bathers{font-size:.7rem;color:#444;margin-top:2px;}
   .tile.rock .bathers{color:#ddd;}
-  .tile-img{width:100%;height:100%;object-fit:contain;border-radius:8px;display:block;}
-  .drawn-tile .tile-img{width:100%;height:100%;object-fit:contain;border-radius:10px;}
+  .tile-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:8px;display:block;}
+  .drawn-tile .tile-img{width:100%;height:100%;object-fit:cover;border-radius:10px;}
+  .tile .guard-marker{position:absolute;bottom:3px;right:3px;display:flex;gap:2px;font-size:1.2rem;line-height:1;filter:drop-shadow(0 0 2px rgba(0,0,0,.6));}
   .valid-cell{position:absolute;width:84px;height:84px;border-radius:12px;border:3px dashed var(--sea);background:rgba(0,180,216,.15);cursor:pointer;transition:background .15s;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
   .valid-cell:hover{background:rgba(0,180,216,.38);}
 
@@ -1224,7 +1225,7 @@ const CLIENT_HTML = `<!DOCTYPE html>
     /* Board tiles smaller */
     .tile { width: 60px !important; height: 60px !important; font-size: 1.2rem !important; border-radius: 9px !important; }
     .tile .bathers { font-size: .6rem !important; }
-    .tile .guard-marker { font-size: 1.1rem !important; }
+    .tile .guard-marker { font-size: 1rem !important; bottom: 2px; right: 2px; }
     .valid-cell { width: 60px !important; height: 60px !important; font-size: 1.3rem !important; }
 
     /* Bottom panel: anchored to bottom of screen */
